@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>掲載日から逆算した OOH進行目安</title>
+  <style>
+    :root {
+      --red: #b70000;
+      --red-dark: #8f0000;
+      --black: #111;
+      --gray: #e5e5e5;
+      --gray-2: #f5f5f5;
+      --text: #171717;
+      --muted: #666;
+      --radius: 14px;
+      --shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #f2f3f5;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+      line-height: 1.45;
+    }
+
+    .browser {
+      max-width: 1120px;
+      margin: 28px auto;
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      border: 1px solid #ddd;
+    }
+
+    .page {
+      padding: 22px 30px 30px;
+      background: #fff;
+    }
+
+    .top-rule {
+      height: 14px;
+      background: linear-gradient(90deg, var(--red) 0%, var(--red) 88%, transparent 88%);
+      position: relative;
+      margin-bottom: 22px;
+    }
+
+    .top-rule::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 120px;
+      height: 14px;
+      background: repeating-linear-gradient(135deg, var(--red) 0 12px, transparent 12px 22px);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(38px, 6vw, 68px);
+      line-height: 1.06;
+      letter-spacing: -0.06em;
+      font-weight: 950;
+      color: var(--black);
+    }
+
+    h1 .red {
+      color: var(--red);
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      font-size: clamp(22px, 3vw, 34px);
+      font-weight: 850;
+      letter-spacing: 0.02em;
+    }
+
+    .note-line {
+      margin: 12px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      color: #222;
+      font-size: clamp(16px, 2vw, 23px);
+      font-weight: 750;
+    }
+
+    .note-line::before,
+    .note-line::after {
+      content: "";
+      width: min(140px, 18vw);
+      height: 2px;
+      background: #888;
+    }
+
+    .date-panel {
+      margin: 0 0 18px;
+      border: 2px solid var(--red);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fff, #fff8f8);
+      overflow: hidden;
+    }
+
+    .date-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      color: #fff;
+      background: linear-gradient(180deg, #c80000, #930000);
+      font-weight: 950;
+      font-size: 20px;
+    }
+
+    .date-panel-head .mini {
+      font-size: 13px;
+      font-weight: 750;
+      opacity: 0.9;
+    }
+
+    .date-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      padding: 16px 18px;
+    }
+
+    .date-field {
+      display: grid;
+      grid-template-columns: 132px 1fr 94px;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .date-field label {
+      font-size: 16px;
+      font-weight: 900;
+      color: #111;
+    }
+
+    .date-field input[type="date"] {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 750;
+      background: #fff;
+      color: #111;
+    }
+
+    .date-field input[type="date"]:focus {
+      outline: none;
+      border-color: var(--red);
+      box-shadow: 0 0 0 4px rgba(183, 0, 0, 0.1);
+    }
+
+    .weekday-badge {
+      height: 44px;
+      border-radius: 10px;
+      background: #111;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      font-weight: 950;
+    }
+
+    .date-output {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0 18px 16px;
+    }
+
+    .date-chip {
+      border: 1px solid #e1b7b7;
+      border-radius: 10px;
+      background: #fff;
+      padding: 10px 12px;
+    }
+
+    .date-chip dt {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .date-chip dd {
+      margin: 0;
+      color: var(--red);
+      font-size: 18px;
+      font-weight: 950;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .timeline {
+      position: relative;
+      border: 1px solid #d8d8d8;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      top: 28px;
+      bottom: 28px;
+      left: 137px;
+      width: 5px;
+      background: var(--red);
+      border-radius: 10px;
+      z-index: 0;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 92px 72px minmax(0, 1fr);
+      min-height: 88px;
+      border-bottom: 1px solid #ddd;
+      background: #fff;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step:last-child { border-bottom: none; }
+
+    .icon-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid #e2e2e2;
+      background: linear-gradient(90deg, #fff, #fafafa);
+    }
+
+    .num-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .num {
+      width: 44px;
+      height: 44px;
+      background: var(--red);
+      color: #fff;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 900;
+      box-shadow: 0 0 0 5px #fff;
+    }
+
+    .step-body { padding: 10px 12px 10px 0; }
+
+    .step-title {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 3px;
+    }
+
+    .term {
+      color: var(--red);
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .task {
+      color: var(--black);
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .actual-date {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 1px 0 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #fff0f0;
+      border: 1px solid #f0c0c0;
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .actual-date:empty { display: none; }
+
+    ul { margin: 0; padding-left: 1.05em; }
+
+    li {
+      margin: 1px 0;
+      font-size: 14.5px;
+      font-weight: 650;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .card {
+      border-radius: 12px;
+      background: #fff;
+      border: 2px solid var(--red);
+      overflow: hidden;
+      box-shadow: 0 5px 14px rgba(0,0,0,0.04);
+    }
+
+    .card-title-red {
+      margin: 18px 18px 10px;
+      padding: 12px 16px;
+      text-align: center;
+      color: #fff;
+      background: linear-gradient(180deg, #c80000, #930000);
+      border-radius: 8px;
+      font-size: 34px;
+      font-weight: 950;
+      letter-spacing: 0.02em;
+    }
+
+    .must-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 24px 26px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .must-row:last-of-type { border-bottom: none; }
+
+    .circle-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: var(--red);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 42px;
+      font-weight: 900;
+    }
+
+    .must-text {
+      font-size: 36px;
+      line-height: 1.08;
+      font-weight: 950;
+    }
+
+    .must-text .small {
+      display: block;
+      color: var(--black);
+      font-size: 34px;
+    }
+
+    .must-text .big {
+      color: var(--red);
+      font-size: 42px;
+      letter-spacing: -0.04em;
+    }
+
+    .mini-alert {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 4px 24px 24px;
+      font-weight: 800;
+      font-size: 15px;
+    }
+
+    .alert-icon {
+      width: 38px;
+      height: 38px;
+      border: 4px solid var(--red);
+      color: var(--red);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      font-weight: 950;
+      flex: 0 0 auto;
+    }
+
+    .black-card {
+      border: 2px solid #222;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .black-title {
+      background: linear-gradient(180deg, #171717, #030303);
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      font-size: 26px;
+      font-weight: 950;
+    }
+
+    .evidence-row {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 17px 20px;
+      border-bottom: 1px dotted #c7c7c7;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .evidence-row:last-child { border-bottom: none; }
+
+    .small-round-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 2px solid #999;
+      display: grid;
+      place-items: center;
+      font-size: 30px;
+      background: #fff;
+      color: #111;
+    }
+
+    .evidence-row .red {
+      color: var(--red);
+      display: block;
+      font-size: 24px;
+    }
+
+    .notice-card {
+      border: 2px solid var(--red);
+      border-radius: 12px;
+      padding: 18px 20px;
+      background: #fff;
+    }
+
+    .notice-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--red);
+      font-weight: 950;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .notice-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      background: var(--red);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 28px;
+    }
+
+    .notice-card li,
+    .footer-notice li {
+      color: #111;
+      font-size: 17px;
+      font-weight: 780;
+      margin: 5px 0;
+    }
+
+    .notice-card li::marker,
+    .footer-notice li::marker { color: var(--red); }
+
+    .footer-notice {
+      margin-top: 18px;
+      border: 2px solid var(--red);
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      align-items: center;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .footer-title {
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--red);
+      font-size: 26px;
+      font-weight: 950;
+      border-right: 2px solid var(--red);
+      min-height: 92px;
+    }
+
+    .triangle {
+      width: 0;
+      height: 0;
+      border-left: 34px solid transparent;
+      border-right: 34px solid transparent;
+      border-bottom: 62px solid var(--red);
+      position: relative;
+      flex: 0 0 auto;
+    }
+
+    .triangle::after {
+      content: "!";
+      position: absolute;
+      left: -7px;
+      top: 21px;
+      color: #fff;
+      font-size: 35px;
+      font-weight: 950;
+    }
+
+    .footer-notice ul { padding: 14px 26px 14px 44px; }
+
+    .icon {
+      width: 54px;
+      height: 54px;
+      color: #111;
+    }
+
+    .icon svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon .fill { fill: currentColor; stroke: none; }
+
+    @media (max-width: 960px) {
+      .browser { margin: 0; border-radius: 0; }
+      .page { padding: 18px 14px 22px; }
+      .layout { grid-template-columns: 1fr; }
+      .date-controls { grid-template-columns: 1fr; }
+      .date-output { grid-template-columns: 1fr; }
+      .date-field { grid-template-columns: 112px 1fr 76px; }
+      .timeline::before { left: 96px; }
+      .step { grid-template-columns: 66px 58px minmax(0, 1fr); }
+      .icon { width: 42px; height: 42px; }
+      .num { width: 38px; height: 38px; font-size: 20px; }
+      .term { font-size: 20px; }
+      .task { font-size: 17px; }
+      li { font-size: 13px; }
+      .footer-notice { grid-template-columns: 1fr; }
+      .footer-title { border-right: none; border-bottom: 2px solid var(--red); }
+    }
+
+    @media print {
+      body { background: #fff; }
+      .browser { box-shadow: none; border: none; margin: 0; max-width: none; }
+      .date-field input[type="date"] { border-color: #bbb; }
+    }
+  </style>
+</head>
+<body>
+  <main class="browser">
+    <section class="page">
+      <div class="top-rule"></div>
+      <header>
+        <h1>掲載日から逆算した <span class="red">OOH</span>進行目安</h1>
+        <div class="subtitle">T＝掲載日／掲出開始日</div>
+        <div class="note-line">実績ベース＋安全運用ベースの目安</div>
+      </header>
+
+      <section class="date-panel" aria-label="掲載日入力">
+        <div class="date-panel-head">
+          <span>日付入力</span>
+          <span class="mini">掲載開始日を基準に、各T日程を自動計算</span>
+        </div>
+        <div class="date-controls">
+          <div class="date-field">
+            <label for="startDate">掲載開始日</label>
+            <input id="startDate" type="date" />
+            <div class="weekday-badge" id="startWeekday">--</div>
+          </div>
+          <div class="date-field">
+            <label for="endDate">掲載終了日<br />＝試合日</label>
+            <input id="endDate" type="date" />
+            <div class="weekday-badge" id="endWeekday">--</div>
+          </div>
+        </div>
+        <dl class="date-output">
+          <div class="date-chip"><dt>掲載期間</dt><dd id="periodText">日付を入力してください</dd></div>
+          <div class="date-chip"><dt>T基準</dt><dd id="baseText">掲載開始日</dd></div>
+          <div class="date-chip"><dt>試合日</dt><dd id="matchText">未入力</dd></div>
+        </dl>
+      </section>
+
+      <div class="layout">
+        <section class="timeline" aria-label="OOH進行タイムライン">
+          <article class="step" data-offset-start="-45" data-offset-end="-35">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="10" width="32" height="30" rx="3"></rect><line x1="8" y1="18" x2="40" y2="18"></line><line x1="16" y1="6" x2="16" y2="13"></line><line x1="32" y1="6" x2="32" y2="13"></line><path d="M16 25h4M24 25h4M32 25h4M16 32h4M24 32h4M32 32h4"></path></svg></div></div>
+            <div class="num-cell"><span class="num">1</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-45〜T-35</span><span class="task">｜掲載方針の整理</span></div><div class="actual-date"></div><ul><li>対象試合・期間・目的を決める</li><li>誰に見せたいかを整理</li><li>予算感、OOH／Web／SNSの役割を仮決め</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-35" data-offset-end="-30">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="fill" cx="16" cy="20" r="6"></circle><circle class="fill" cx="31" cy="22" r="5"></circle><path class="fill" d="M6 38c1-8 6-12 10-12s9 4 10 12H6zM25 38c1-6 5-10 9-10s7 4 8 10H25z"></path><rect x="27" y="6" width="15" height="9" rx="3"></rect><path d="M31 15l-3 4"></path></svg></div></div>
+            <div class="num-cell"><span class="num">2</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-35〜T-30</span><span class="task">｜媒体・掲出場所の相談</span></div><div class="actual-date"></div><ul><li>代理店へ相談</li><li>掲出駅、サイズ、期間、空き枠を確認</li><li>見積もり依頼、仕様確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-30" data-offset-end="-25">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 6h18l8 8v28H12z"></path><path d="M30 6v10h10"></path><path d="M18 22h14M18 29h10"></path><path d="M32 34l8-8 4 4-8 8-6 2z"></path></svg></div></div>
+            <div class="num-cell"><span class="num">3</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-30〜T-25</span><span class="task">｜企画・構成の確定</span></div><div class="actual-date"></div><ul><li>訴求軸を決める</li><li>1試合訴求か複数試合訴求かを整理</li><li>コピー、試合情報、ロゴ、QR、注意事項を整理</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-25" data-offset-end="-21">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="7" y="10" width="34" height="24" rx="2"></rect><path d="M18 40h12M24 34v6M24 16l5 7-5 9-5-9zM24 16v10"></path></svg></div></div>
+            <div class="num-cell"><span class="num">4</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-25〜T-21</span><span class="task">｜デザイン初稿</span></div><div class="actual-date"></div><ul><li>ラフ制作</li><li>素材回収</li><li>ファクトチェック</li><li>広告主表記、QR遷移を確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-21" data-offset-end="-20">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="12" y="10" width="24" height="32" rx="3"></rect><path d="M19 10a5 5 0 0 1 10 0M18 20h10M18 27h8M17 34l3 3 6-7"></path><circle cx="35" cy="35" r="8"></circle><path d="M31 35l3 3 6-7"></path></svg></div></div>
+            <div class="num-cell"><span class="num">5</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-21〜T-20</span><span class="task">｜考査用データFIX</span></div><div class="actual-date"></div><ul><li>考査提出用データを書き出し</li><li>文言・表記・構成を原則確定</li><li>修正可能性のある箇所を整理</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-20" data-offset-end="-18">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path class="fill" d="M24 6l12 14h-8v12h-8V20h-8z"></path><path d="M10 31v9h28v-9M16 36h16"></path></svg></div></div>
+            <div class="num-cell"><span class="num">6</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-20〜T-18</span><span class="task">｜考査提出</span></div><div class="actual-date"></div><ul><li>代理店へ送付</li><li>媒体社／電鉄各社へ展開</li><li>承認期限と最終納品日を確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-18" data-offset-end="-15">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M38 18a14 14 0 0 0-24-6l-5 5"></path><path d="M9 8v9h9"></path><path d="M10 30a14 14 0 0 0 24 6l5-5"></path><path d="M39 40v-9h-9"></path></svg></div></div>
+            <div class="num-cell"><span class="num">7</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-18〜T-15</span><span class="task">｜考査戻し・修正対応</span></div><div class="actual-date"></div><ul><li>指摘反映</li><li>文言修正</li><li>ロゴ位置、権利表記、価格・条件を確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-15" data-offset-end="-12">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="11"></circle><path d="M19 18l4 4 7-8M17 29l-5 13 10-5 2 5 4-13M31 29l5 13-10-5-2 5-4-13"></path></svg></div></div>
+            <div class="num-cell"><span class="num">8</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-15〜T-12</span><span class="task">｜最終意匠FIX</span></div><div class="actual-date"></div><ul><li>考査承認後に最終化</li><li>試合日、曜日、会場、価格、対象条件を再確認</li><li>社内共有</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-12" data-offset-end="-10">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 5h18l7 7v31H13z"></path><path d="M31 5v9h8"></path><rect class="fill" x="8" y="25" width="26" height="12" rx="2"></rect><text x="11" y="34" font-size="7" fill="#fff" font-family="Arial" font-weight="700">PDF</text></svg></div></div>
+            <div class="num-cell"><span class="num">9</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-12〜T-10</span><span class="task">｜入稿データ作成</span></div><div class="actual-date"></div><ul><li>印刷用データ作成</li><li>サイズ、塗り足し、解像度確認</li><li>納品先ごとの指定確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-10" data-offset-end="-7">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 17V7h20v10"></path><rect x="9" y="17" width="30" height="18" rx="3"></rect><path d="M15 29h18v13H15zM15 23h4"></path></svg></div></div>
+            <div class="num-cell"><span class="num">10</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-10〜T-7</span><span class="task">｜印刷・納品</span></div><div class="actual-date"></div><ul><li>印刷会社へ入稿</li><li>納品先へ発送／手配</li><li>必要書類の同封／納品完了連絡</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-7" data-offset-end="-3">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="21" cy="21" r="12"></circle><path d="M30 30l11 11"></path></svg></div></div>
+            <div class="num-cell"><span class="num">11</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-7〜T-3</span><span class="task">｜掲出前確認</span></div><div class="actual-date"></div><ul><li>納品完了確認</li><li>掲出作業予定確認</li><li>社内共有用メモ整理</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="-1" data-offset-end="-1">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="13" y="8" width="24" height="34" rx="3"></rect><path d="M19 8a5 5 0 0 1 10 0M19 19h12M19 26h12M19 33h12M13 19h-3M13 26h-3M13 33h-3"></path></svg></div></div>
+            <div class="num-cell"><span class="num">12</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T-1</span><span class="task">｜最終確認</span></div><div class="actual-date"></div><ul><li>掲出開始日の再確認</li><li>写真報告タイミング確認</li><li>連動投稿の準備</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="0" data-offset-end="0">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path class="fill" d="M7 19h8v10H7zM17 18l20-9v30l-20-9z"></path><path d="M37 20c3 2 3 6 0 8"></path></svg></div></div>
+            <div class="num-cell"><span class="num">13</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T</span><span class="task">｜掲載開始／掲出開始</span></div><div class="actual-date"></div><ul><li>掲出開始</li><li>当日中に可能なら写真確認</li><li>社内へ開始報告</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="1" data-offset-end="3">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="16" width="32" height="22" rx="4"></rect><path d="M17 16l3-6h9l3 6"></path><circle cx="24" cy="27" r="7"></circle></svg></div></div>
+            <div class="num-cell"><span class="num">14</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T+1〜T+3</span><span class="task">｜掲出報告確認</span></div><div class="actual-date"></div><ul><li>掲出写真確認</li><li>掲出漏れ、誤掲出、視認性を確認</li><li>必要に応じて代理店へ確認</li></ul></div>
+          </article>
+
+          <article class="step" data-offset-start="7" data-offset-end="7">
+            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 40h34"></path><rect class="fill" x="12" y="26" width="6" height="12"></rect><rect class="fill" x="23" y="18" width="6" height="20"></rect><rect class="fill" x="34" y="10" width="6" height="28"></rect><path d="M10 18l9-7 8 5 13-12"></path></svg></div></div>
+            <div class="num-cell"><span class="num">15</span></div>
+            <div class="step-body"><div class="step-title"><span class="term">T+7〜掲載終了後</span><span class="task">｜精算・振り返り</span></div><div class="actual-date"></div><ul><li>請求タイミング整理</li><li>掲出報告書を保管</li><li>次回改善点をメモ</li></ul></div>
+          </article>
+        </section>
+
+        <aside class="side">
+          <section class="card" aria-label="まず守る3つ">
+            <div class="card-title-red">まず守る3つ</div>
+            <div class="must-row"><div class="circle-icon">✓</div><div class="must-text"><span class="small">T-20：</span><span class="big">考査提出</span></div></div>
+            <div class="must-row"><div class="circle-icon">▣</div><div class="must-text"><span class="small">T-10：</span><span class="big">印刷入稿</span></div></div>
+            <div class="must-row"><div class="circle-icon">□</div><div class="must-text"><span class="small">T-7：</span><span class="big">納品完了</span></div></div>
+            <div class="mini-alert"><span class="alert-icon">!</span><span>この3点を赤字ルール化すると<br />事故が減る</span></div>
+          </section>
+
+          <section class="black-card" aria-label="実績から見える目安">
+            <div class="black-title">実績から見える目安</div>
+            <div class="evidence-row"><div class="small-round-icon">▦</div><div>考査提出：<span class="red">T-18〜T-20前後</span></div></div>
+            <div class="evidence-row"><div class="small-round-icon">◷</div><div>考査承認：<span class="red">翌日〜数日</span></div></div>
+            <div class="evidence-row"><div class="small-round-icon">▰</div><div>納品完了：<span class="red">T-7〜T-10前後</span></div></div>
+            <div class="evidence-row"><div class="small-round-icon">⬟</div><div>安全運用なら<span class="red">少し前倒し推奨</span></div></div>
+          </section>
+
+          <section class="notice-card" aria-label="前提・注意">
+            <div class="notice-head"><span class="notice-icon">▣</span><span>前提・注意</span></div>
+            <ul>
+              <li>土日祝、印刷会社、媒体社都合を見て1〜3営業日前倒し推奨</li>
+              <li>新規媒体、複数駅、スポンサー表記あり案件は余白を厚めに</li>
+              <li>公共交通系は考査と納品のズレに注意</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+
+      <section class="footer-notice" aria-label="前提・注意のまとめ">
+        <div class="footer-title"><span class="triangle" aria-hidden="true"></span><span>前提・注意</span></div>
+        <ul>
+          <li>土日祝、印刷会社、媒体社都合を見て1〜3営業日前倒し推奨</li>
+          <li>新規媒体、複数駅、スポンサー表記あり案件は余白を厚めに</li>
+          <li>公共交通系は考査と納品のズレに注意</li>
+        </ul>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+    const startInput = document.getElementById("startDate");
+    const endInput = document.getElementById("endDate");
+    const startWeekday = document.getElementById("startWeekday");
+    const endWeekday = document.getElementById("endWeekday");
+    const periodText = document.getElementById("periodText");
+    const baseText = document.getElementById("baseText");
+    const matchText = document.getElementById("matchText");
+
+    function parseDate(value) {
+      if (!value) return null;
+      const [year, month, day] = value.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+
+    function addDays(date, days) {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    }
+
+    function formatDate(date) {
+      if (!date) return "未入力";
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const w = weekdays[date.getDay()];
+      return `${y}/${m}/${d}（${w}）`;
+    }
+
+    function formatShort(date) {
+      if (!date) return "";
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const w = weekdays[date.getDay()];
+      return `${m}/${d}（${w}）`;
+    }
+
+    function countDaysInclusive(startDate, endDate) {
+      if (!startDate || !endDate) return null;
+      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+      return diff + 1;
+    }
+
+    function updateDates() {
+      const startDate = parseDate(startInput.value);
+      const endDate = parseDate(endInput.value);
+
+      startWeekday.textContent = startDate ? `${weekdays[startDate.getDay()]}曜` : "--";
+      endWeekday.textContent = endDate ? `${weekdays[endDate.getDay()]}曜` : "--";
+
+      baseText.textContent = startDate ? formatDate(startDate) : "掲載開始日";
+      matchText.textContent = endDate ? formatDate(endDate) : "未入力";
+
+      if (startDate && endDate) {
+        const periodDays = countDaysInclusive(startDate, endDate);
+        if (periodDays > 0) {
+          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／${periodDays}日間`;
+        } else if (periodDays === 0) {
+          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／日付要確認`;
+        } else {
+          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／終了日が開始日より前です`;
+        }
+      } else if (startDate) {
+        periodText.textContent = `${formatShort(startDate)}〜掲載終了日未入力`;
+      } else if (endDate) {
+        periodText.textContent = `掲載開始日未入力〜${formatShort(endDate)}`;
+      } else {
+        periodText.textContent = "日付を入力してください";
+      }
+
+      document.querySelectorAll(".step").forEach((step) => {
+        const target = step.querySelector(".actual-date");
+        if (!target) return;
+
+        if (!startDate) {
+          target.textContent = "";
+          return;
+        }
+
+        const offsetStart = Number(step.dataset.offsetStart);
+        const offsetEnd = Number(step.dataset.offsetEnd);
+        const calcStart = addDays(startDate, offsetStart);
+        const calcEnd = addDays(startDate, offsetEnd);
+
+        if (offsetStart === offsetEnd) {
+          target.textContent = `目安日：${formatShort(calcStart)}`;
+        } else {
+          target.textContent = `目安期間：${formatShort(calcStart)}〜${formatShort(calcEnd)}`;
+        }
+      });
+    }
+
+    startInput.addEventListener("input", updateDates);
+    endInput.addEventListener("input", updateDates);
+    updateDates();
+  </script>
+</body>
+</html>
