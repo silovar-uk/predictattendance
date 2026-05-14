@@ -1,857 +1,1542 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>掲載日から逆算した OOH進行目安</title>
-  <style>
-    :root {
-      --red: #b70000;
-      --red-dark: #8f0000;
-      --black: #111;
-      --gray: #e5e5e5;
-      --gray-2: #f5f5f5;
-      --text: #171717;
-      --muted: #666;
-      --radius: 14px;
-      --shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      background: #f2f3f5;
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
-      line-height: 1.45;
-    }
-
-    .browser {
-      max-width: 1120px;
-      margin: 28px auto;
-      background: #fff;
-      border-radius: 18px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
-      border: 1px solid #ddd;
-    }
-
-    .page {
-      padding: 22px 30px 30px;
-      background: #fff;
-    }
-
-    .top-rule {
-      height: 14px;
-      background: linear-gradient(90deg, var(--red) 0%, var(--red) 88%, transparent 88%);
-      position: relative;
-      margin-bottom: 22px;
-    }
-
-    .top-rule::after {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 0;
-      width: 120px;
-      height: 14px;
-      background: repeating-linear-gradient(135deg, var(--red) 0 12px, transparent 12px 22px);
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(38px, 6vw, 68px);
-      line-height: 1.06;
-      letter-spacing: -0.06em;
-      font-weight: 950;
-      color: var(--black);
-    }
-
-    h1 .red {
-      color: var(--red);
-      letter-spacing: -0.02em;
-    }
-
-    .subtitle {
-      margin-top: 8px;
-      font-size: clamp(22px, 3vw, 34px);
-      font-weight: 850;
-      letter-spacing: 0.02em;
-    }
-
-    .note-line {
-      margin: 12px auto 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      color: #222;
-      font-size: clamp(16px, 2vw, 23px);
-      font-weight: 750;
-    }
-
-    .note-line::before,
-    .note-line::after {
-      content: "";
-      width: min(140px, 18vw);
-      height: 2px;
-      background: #888;
-    }
-
-    .date-panel {
-      margin: 0 0 18px;
-      border: 2px solid var(--red);
-      border-radius: 14px;
-      background: linear-gradient(180deg, #fff, #fff8f8);
-      overflow: hidden;
-    }
-
-    .date-panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 18px;
-      color: #fff;
-      background: linear-gradient(180deg, #c80000, #930000);
-      font-weight: 950;
-      font-size: 20px;
-    }
-
-    .date-panel-head .mini {
-      font-size: 13px;
-      font-weight: 750;
-      opacity: 0.9;
-    }
-
-    .date-controls {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      padding: 16px 18px;
-    }
-
-    .date-field {
-      display: grid;
-      grid-template-columns: 132px 1fr 94px;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .date-field label {
-      font-size: 16px;
-      font-weight: 900;
-      color: #111;
-    }
-
-    .date-field input[type="date"] {
-      width: 100%;
-      min-width: 0;
-      padding: 10px 12px;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 750;
-      background: #fff;
-      color: #111;
-    }
-
-    .date-field input[type="date"]:focus {
-      outline: none;
-      border-color: var(--red);
-      box-shadow: 0 0 0 4px rgba(183, 0, 0, 0.1);
-    }
-
-    .weekday-badge {
-      height: 44px;
-      border-radius: 10px;
-      background: #111;
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 17px;
-      font-weight: 950;
-    }
-
-    .date-output {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      padding: 0 18px 16px;
-    }
-
-    .date-chip {
-      border: 1px solid #e1b7b7;
-      border-radius: 10px;
-      background: #fff;
-      padding: 10px 12px;
-    }
-
-    .date-chip dt {
-      margin: 0 0 4px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .date-chip dd {
-      margin: 0;
-      color: var(--red);
-      font-size: 18px;
-      font-weight: 950;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 18px;
-      align-items: start;
-    }
-
-    .timeline {
-      position: relative;
-      border: 1px solid #d8d8d8;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .timeline::before {
-      content: "";
-      position: absolute;
-      top: 28px;
-      bottom: 28px;
-      left: 137px;
-      width: 5px;
-      background: var(--red);
-      border-radius: 10px;
-      z-index: 0;
-    }
-
-    .step {
-      display: grid;
-      grid-template-columns: 92px 72px minmax(0, 1fr);
-      min-height: 88px;
-      border-bottom: 1px solid #ddd;
-      background: #fff;
-      position: relative;
-      z-index: 1;
-    }
-
-    .step:last-child { border-bottom: none; }
-
-    .icon-cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-right: 1px solid #e2e2e2;
-      background: linear-gradient(90deg, #fff, #fafafa);
-    }
-
-    .num-cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .num {
-      width: 44px;
-      height: 44px;
-      background: var(--red);
-      color: #fff;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 24px;
-      font-weight: 900;
-      box-shadow: 0 0 0 5px #fff;
-    }
-
-    .step-body { padding: 10px 12px 10px 0; }
-
-    .step-title {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      flex-wrap: wrap;
-      font-weight: 900;
-      line-height: 1.2;
-      margin-bottom: 3px;
-    }
-
-    .term {
-      color: var(--red);
-      font-size: 24px;
-      letter-spacing: -0.03em;
-    }
-
-    .task {
-      color: var(--black);
-      font-size: 20px;
-      letter-spacing: -0.02em;
-    }
-
-    .actual-date {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin: 1px 0 6px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: #fff0f0;
-      border: 1px solid #f0c0c0;
-      color: var(--red);
-      font-size: 13px;
-      font-weight: 900;
-    }
-
-    .actual-date:empty { display: none; }
-
-    ul { margin: 0; padding-left: 1.05em; }
-
-    li {
-      margin: 1px 0;
-      font-size: 14.5px;
-      font-weight: 650;
-    }
-
-    .side {
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-
-    .card {
-      border-radius: 12px;
-      background: #fff;
-      border: 2px solid var(--red);
-      overflow: hidden;
-      box-shadow: 0 5px 14px rgba(0,0,0,0.04);
-    }
-
-    .card-title-red {
-      margin: 18px 18px 10px;
-      padding: 12px 16px;
-      text-align: center;
-      color: #fff;
-      background: linear-gradient(180deg, #c80000, #930000);
-      border-radius: 8px;
-      font-size: 34px;
-      font-weight: 950;
-      letter-spacing: 0.02em;
-    }
-
-    .must-row {
-      display: grid;
-      grid-template-columns: 92px 1fr;
-      gap: 12px;
-      align-items: center;
-      padding: 24px 26px;
-      border-bottom: 1px solid #ddd;
-    }
-
-    .must-row:last-of-type { border-bottom: none; }
-
-    .circle-icon {
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      background: var(--red);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 42px;
-      font-weight: 900;
-    }
-
-    .must-text {
-      font-size: 36px;
-      line-height: 1.08;
-      font-weight: 950;
-    }
-
-    .must-text .small {
-      display: block;
-      color: var(--black);
-      font-size: 34px;
-    }
-
-    .must-text .big {
-      color: var(--red);
-      font-size: 42px;
-      letter-spacing: -0.04em;
-    }
-
-    .mini-alert {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 4px 24px 24px;
-      font-weight: 800;
-      font-size: 15px;
-    }
-
-    .alert-icon {
-      width: 38px;
-      height: 38px;
-      border: 4px solid var(--red);
-      color: var(--red);
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      font-size: 24px;
-      font-weight: 950;
-      flex: 0 0 auto;
-    }
-
-    .black-card {
-      border: 2px solid #222;
-      border-radius: 12px;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .black-title {
-      background: linear-gradient(180deg, #171717, #030303);
-      color: #fff;
-      text-align: center;
-      padding: 12px;
-      font-size: 26px;
-      font-weight: 950;
-    }
-
-    .evidence-row {
-      display: grid;
-      grid-template-columns: 74px 1fr;
-      gap: 12px;
-      align-items: center;
-      padding: 17px 20px;
-      border-bottom: 1px dotted #c7c7c7;
-      font-size: 21px;
-      font-weight: 900;
-    }
-
-    .evidence-row:last-child { border-bottom: none; }
-
-    .small-round-icon {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      border: 2px solid #999;
-      display: grid;
-      place-items: center;
-      font-size: 30px;
-      background: #fff;
-      color: #111;
-    }
-
-    .evidence-row .red {
-      color: var(--red);
-      display: block;
-      font-size: 24px;
-    }
-
-    .notice-card {
-      border: 2px solid var(--red);
-      border-radius: 12px;
-      padding: 18px 20px;
-      background: #fff;
-    }
-
-    .notice-head {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      color: var(--red);
-      font-weight: 950;
-      font-size: 24px;
-      margin-bottom: 8px;
-    }
-
-    .notice-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 8px;
-      background: var(--red);
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 28px;
-    }
-
-    .notice-card li,
-    .footer-notice li {
-      color: #111;
-      font-size: 17px;
-      font-weight: 780;
-      margin: 5px 0;
-    }
-
-    .notice-card li::marker,
-    .footer-notice li::marker { color: var(--red); }
-
-    .footer-notice {
-      margin-top: 18px;
-      border: 2px solid var(--red);
-      border-radius: 10px;
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      align-items: center;
-      overflow: hidden;
-      background: #fff;
-    }
-
-    .footer-title {
-      padding: 20px 22px;
-      display: flex;
-      align-items: center;
-      gap: 18px;
-      color: var(--red);
-      font-size: 26px;
-      font-weight: 950;
-      border-right: 2px solid var(--red);
-      min-height: 92px;
-    }
-
-    .triangle {
-      width: 0;
-      height: 0;
-      border-left: 34px solid transparent;
-      border-right: 34px solid transparent;
-      border-bottom: 62px solid var(--red);
-      position: relative;
-      flex: 0 0 auto;
-    }
-
-    .triangle::after {
-      content: "!";
-      position: absolute;
-      left: -7px;
-      top: 21px;
-      color: #fff;
-      font-size: 35px;
-      font-weight: 950;
-    }
-
-    .footer-notice ul { padding: 14px 26px 14px 44px; }
-
-    .icon {
-      width: 54px;
-      height: 54px;
-      color: #111;
-    }
-
-    .icon svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .icon .fill { fill: currentColor; stroke: none; }
-
-    @media (max-width: 960px) {
-      .browser { margin: 0; border-radius: 0; }
-      .page { padding: 18px 14px 22px; }
-      .layout { grid-template-columns: 1fr; }
-      .date-controls { grid-template-columns: 1fr; }
-      .date-output { grid-template-columns: 1fr; }
-      .date-field { grid-template-columns: 112px 1fr 76px; }
-      .timeline::before { left: 96px; }
-      .step { grid-template-columns: 66px 58px minmax(0, 1fr); }
-      .icon { width: 42px; height: 42px; }
-      .num { width: 38px; height: 38px; font-size: 20px; }
-      .term { font-size: 20px; }
-      .task { font-size: 17px; }
-      li { font-size: 13px; }
-      .footer-notice { grid-template-columns: 1fr; }
-      .footer-title { border-right: none; border-bottom: 2px solid var(--red); }
-    }
-
-    @media print {
-      body { background: #fff; }
-      .browser { box-shadow: none; border: none; margin: 0; max-width: none; }
-      .date-field input[type="date"] { border-color: #bbb; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>来場目標逆算ダッシュボード v7 / 浦和レッズ</title>
+<style>
+:root{
+  --red:#b40012; --red-dark:#7a000c; --red-soft:#fff2f3; --red-border:#ffd0d4;
+  --ink:#0f1014; --ink-2:#2a2d35; --muted:#6b7280; --muted-2:#9ca3af;
+  --line:#e5e7eb; --line-soft:#f1f3f5; --bg:#f7f6f4; --card:#ffffff;
+  --ok:#0f766e; --ok-soft:#e6f7f3;
+  --warn:#b45309; --warn-soft:#fef3c7;
+  --bad:#b91c1c; --bad-soft:#fee2e2;
+  --info:#1e40af; --info-soft:#e0e7ff;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+  --shadow:0 4px 12px rgba(15,23,42,.05), 0 12px 28px rgba(15,23,42,.06);
+  --shadow-lg:0 8px 24px rgba(15,23,42,.08), 0 24px 48px rgba(15,23,42,.08);
+  --radius:18px; --radius-sm:12px; --radius-lg:24px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Kaku Gothic ProN','Yu Gothic Medium','Yu Gothic',Meiryo,sans-serif;
+  font-feature-settings:"palt" 1;
+  line-height:1.65; letter-spacing:.005em;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit}
+.mono{font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace}
+
+/* ===== Header ===== */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid var(--line);
+}
+.topbar-inner{max-width:1280px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:12px; min-width:0}
+.brand-mark{width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--red),var(--red-dark)); display:flex; align-items:center; justify-content:center; color:white; font-weight:900; letter-spacing:-.05em; font-size:18px; flex-shrink:0}
+.brand-text{display:flex; flex-direction:column; line-height:1.2; min-width:0}
+.brand-text .t1{font-size:11px; font-weight:800; letter-spacing:.18em; color:var(--muted); text-transform:uppercase}
+.brand-text .t2{font-size:15px; font-weight:900; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.match-pill{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:6px 14px 6px 6px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all .15s}
+.match-pill:hover{border-color:var(--red-border); box-shadow:var(--shadow)}
+.match-pill .num{width:34px; height:34px; border-radius:50%; background:var(--ink); color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:12px}
+.match-pill .info{display:flex; flex-direction:column; line-height:1.1}
+.match-pill .info .date{font-size:11px; color:var(--muted); font-weight:700}
+.match-pill .info .name{font-size:14px; font-weight:800; letter-spacing:-.01em}
+.match-pill .chev{color:var(--muted); margin-left:4px; font-size:14px}
+.summary-pill{cursor:default; pointer-events:none}
+.summary-pill:hover{border-color:var(--line); box-shadow:var(--shadow-sm)}
+.top-actions{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+.icon-btn{background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 12px; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; color:var(--ink-2); transition:all .15s}
+.icon-btn:hover{border-color:var(--ink-2); color:var(--ink)}
+.icon-btn svg{width:14px; height:14px}
+
+/* ===== Layout ===== */
+.wrap{max-width:1280px; margin:0 auto; padding:28px 24px 80px}
+.section-title{display:flex; align-items:baseline; gap:12px; margin:0 0 14px}
+.section-title .num{font-family:'SF Mono',monospace; font-size:12px; color:var(--muted); font-weight:700; letter-spacing:.05em}
+.section-title h2{margin:0; font-size:24px; font-weight:900; letter-spacing:-.03em}
+.section-title .desc{margin-left:auto; font-size:12px; color:var(--muted)}
+.section{margin:0 0 36px}
+
+/* ===== Match Picker ===== */
+.match-picker{position:fixed; inset:0; background:rgba(15,16,20,.5); backdrop-filter:blur(6px); z-index:100; display:none; align-items:flex-start; justify-content:center; padding:80px 20px 20px; overflow-y:auto}
+.match-picker.open{display:flex}
+.match-picker-inner{background:#fff; width:100%; max-width:880px; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); padding:28px; max-height:calc(100vh - 100px); overflow-y:auto}
+.match-picker-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px}
+.match-picker-head h3{margin:0; font-size:22px; font-weight:900; letter-spacing:-.02em}
+.close-btn{background:transparent; border:0; font-size:20px; cursor:pointer; color:var(--muted); width:36px; height:36px; border-radius:10px}
+.close-btn:hover{background:var(--line-soft); color:var(--ink)}
+.match-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px}
+.match-card-pick{border:1px solid var(--line); border-radius:14px; padding:14px; cursor:pointer; background:#fff; text-align:left; transition:all .15s; position:relative}
+.match-card-pick:hover{border-color:var(--red); box-shadow:var(--shadow)}
+.match-card-pick.active{border-color:var(--red); background:var(--red-soft); box-shadow:var(--shadow)}
+.match-card-pick .date{font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.05em}
+.match-card-pick .opp{font-size:16px; font-weight:900; margin:4px 0 6px; letter-spacing:-.02em}
+.match-card-pick .meta{display:flex; gap:6px; flex-wrap:wrap}
+.tag{display:inline-block; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; background:var(--line-soft); color:var(--ink-2); letter-spacing:.04em}
+.tag.high{background:#fde2e4; color:var(--red)}
+.tag.mid{background:var(--warn-soft); color:var(--warn)}
+.tag.low{background:var(--ok-soft); color:var(--ok)}
+.tag.done{background:#e5e7eb; color:var(--muted)}
+.match-add{border:2px dashed var(--line); border-radius:14px; padding:14px; cursor:pointer; background:transparent; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:var(--muted); font-weight:800; font-size:13px; min-height:96px; transition:all .15s}
+.match-add:hover{border-color:var(--red); color:var(--red); background:var(--red-soft)}
+
+/* ===== Verdict (信号機) ===== */
+.verdict{
+  background:linear-gradient(135deg, #0f1014 0%, #2a2d35 100%);
+  color:#fff; border-radius:var(--radius-lg); padding:28px; position:relative; overflow:hidden;
+  box-shadow:var(--shadow-lg);
+}
+.verdict::before{content:""; position:absolute; right:-100px; top:-100px; width:300px; height:300px; border-radius:50%; border:60px solid rgba(180,0,18,.16)}
+.verdict-inner{position:relative; z-index:1}
+.verdict-header{display:flex; align-items:center; gap:12px; margin-bottom:18px}
+.verdict-header .label{font-size:11px; font-weight:800; letter-spacing:.18em; color:rgba(255,255,255,.6); text-transform:uppercase}
+.verdict-status{display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:900; letter-spacing:.02em}
+.verdict-status.green{background:rgba(15,118,110,.25); color:#5eead4}
+.verdict-status.yellow{background:rgba(180,83,9,.3); color:#fcd34d}
+.verdict-status.red{background:rgba(185,28,28,.3); color:#fca5a5}
+.verdict-status .dot{width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 12px currentColor}
+.verdict-headline{font-size:clamp(22px, 3.4vw, 34px); font-weight:900; letter-spacing:-.035em; line-height:1.25; margin:8px 0 6px}
+.verdict-sub{font-size:14px; color:rgba(255,255,255,.7); max-width:720px; line-height:1.7}
+.verdict-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-top:22px}
+@media(max-width:720px){.verdict-grid{grid-template-columns:1fr}}
+.verdict-cell{background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:16px; backdrop-filter:blur(6px)}
+.verdict-cell .l{font-size:11px; font-weight:800; letter-spacing:.12em; color:rgba(255,255,255,.55); text-transform:uppercase}
+.verdict-cell .v{font-size:28px; font-weight:900; letter-spacing:-.04em; margin-top:4px; line-height:1.1; font-variant-numeric:tabular-nums}
+.verdict-cell .s{font-size:12px; color:rgba(255,255,255,.65); margin-top:4px}
+.verdict-cell.danger .v{color:#fca5a5}
+.verdict-cell.warn .v{color:#fcd34d}
+.verdict-cell.ok .v{color:#5eead4}
+
+/* ===== Cards ===== */
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-sm)}
+.card.elevated{box-shadow:var(--shadow)}
+.card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px}
+.card-head h3{margin:0; font-size:17px; font-weight:900; letter-spacing:-.02em}
+.card-head .sub{font-size:12px; color:var(--muted); margin-top:3px}
+
+.grid{display:grid; gap:16px}
+.grid-2{grid-template-columns:repeat(2, minmax(0,1fr))}
+.grid-3{grid-template-columns:repeat(3, minmax(0,1fr))}
+.grid-4{grid-template-columns:repeat(4, minmax(0,1fr))}
+@media(max-width:980px){.grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* ===== Inputs ===== */
+.input-block{display:flex; flex-direction:column; gap:6px}
+.input-block label{font-size:12px; color:var(--muted); font-weight:800; display:flex; align-items:center; gap:6px}
+.help{display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; background:var(--line-soft); color:var(--muted); font-size:10px; font-weight:900; cursor:help; position:relative}
+.help:hover{background:var(--red-soft); color:var(--red)}
+.help[data-tip]:hover::after{
+  content:attr(data-tip); position:absolute; left:50%; bottom:calc(100% + 8px); transform:translateX(-50%);
+  background:var(--ink); color:#fff; padding:8px 11px; border-radius:8px;
+  width:max-content; max-width:260px; white-space:normal; text-align:left;
+  font-size:11px; font-weight:600; line-height:1.5; letter-spacing:.01em; z-index:20;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+.help[data-tip]:hover::before{
+  content:""; position:absolute; left:50%; bottom:100%; transform:translateX(-50%);
+  border:5px solid transparent; border-top-color:var(--ink); z-index:21;
+}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%; border:1px solid var(--line); border-radius:10px;
+  padding:10px 12px; font-size:14px; background:#fff; color:var(--ink);
+  font-family:inherit; transition:border-color .15s, box-shadow .15s;
+  font-variant-numeric:tabular-nums;
+}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(180,0,18,.12)}
+input[disabled]{background:var(--line-soft); color:var(--muted)}
+
+.btn{border:0; border-radius:10px; padding:10px 16px; font-weight:900; cursor:pointer; font-size:13px; letter-spacing:.01em; transition:all .15s; display:inline-flex; align-items:center; gap:6px}
+.btn.primary{background:var(--red); color:#fff}
+.btn.primary:hover{background:var(--red-dark)}
+.btn.ghost{background:#fff; color:var(--ink-2); border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink-2); color:var(--ink)}
+.btn.danger{background:#fff; color:var(--bad); border:1px solid var(--bad-soft)}
+.btn.danger:hover{background:var(--bad-soft)}
+.btn.sm{padding:6px 10px; font-size:12px}
+
+/* ===== Tabs ===== */
+.tabs{display:flex; gap:2px; padding:4px; background:var(--line-soft); border-radius:12px; margin-bottom:16px; flex-wrap:wrap}
+.tab{flex:1; min-width:max-content; background:transparent; border:0; padding:9px 16px; font-size:13px; font-weight:800; color:var(--muted); cursor:pointer; border-radius:9px; transition:all .15s; letter-spacing:.01em}
+.tab:hover{color:var(--ink)}
+.tab.active{background:#fff; color:var(--ink); box-shadow:var(--shadow-sm)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ===== Pace / Timeline ===== */
+.pace-board{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media(max-width:720px){.pace-board{grid-template-columns:1fr}}
+.pace-row{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px dashed var(--line); font-size:13px}
+.pace-row:last-child{border-bottom:0}
+.pace-row .label{flex:1; color:var(--muted); font-weight:700}
+.pace-row .value{font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.pace-row .value.bad{color:var(--bad)}
+.pace-row .value.warn{color:var(--warn)}
+.pace-row .value.ok{color:var(--ok)}
+
+.lead-bar{position:relative; height:54px; margin:18px 0 8px}
+.lead-track{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:6px; background:var(--line-soft); border-radius:999px}
+.lead-fill{position:absolute; left:0; top:50%; transform:translateY(-50%); height:6px; background:linear-gradient(90deg, var(--red), var(--red-dark)); border-radius:999px}
+.lead-tick{position:absolute; top:0; height:54px; display:flex; flex-direction:column; align-items:center}
+.lead-tick .pin{width:2px; height:18px; background:var(--ink); margin-top:18px}
+.lead-tick.now .pin{background:var(--red); height:30px; margin-top:12px}
+.lead-tick .lbl{font-size:10px; font-weight:800; color:var(--muted); margin-top:2px; white-space:nowrap}
+.lead-tick.now .lbl{color:var(--red); font-weight:900}
+.lead-warn{display:flex; gap:8px; align-items:flex-start; padding:10px 12px; background:var(--warn-soft); border-radius:10px; margin-top:10px; font-size:12px; color:var(--warn); font-weight:700; line-height:1.5}
+
+/* ===== Composition Bar ===== */
+.comp-bar{display:flex; height:48px; border-radius:14px; overflow:hidden; background:var(--line-soft); border:1px solid var(--line); margin:14px 0 10px; position:relative}
+.comp-marker{position:absolute; top:-8px; bottom:-8px; width:2px; background:var(--ink); z-index:5}
+.comp-marker .badge{position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; border-radius:6px; padding:2px 8px; font-size:10px; font-weight:900; white-space:nowrap; letter-spacing:.02em}
+.comp-seg{height:100%; min-width:2px; position:relative; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:900; font-variant-numeric:tabular-nums; cursor:default}
+.comp-seg:hover .tipbox{display:block}
+.tipbox{display:none; position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%); background:var(--ink); color:#fff; padding:8px 12px; border-radius:8px; font-size:12px; white-space:nowrap; z-index:6; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.legend{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+.legend-pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border:1px solid var(--line); border-radius:999px; font-size:11px; font-weight:800; color:var(--ink-2); background:#fff}
+.legend-dot{width:8px; height:8px; border-radius:50%}
+
+/* ===== Method Cards ===== */
+.method-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px}
+.method-card{
+  background:#fff; border:1px solid var(--line); border-radius:14px;
+  padding:0; overflow:hidden; box-shadow:var(--shadow-sm); transition:all .15s;
+  display:flex; flex-direction:column;
+}
+.method-card:hover{box-shadow:var(--shadow); border-color:var(--ink-2)}
+.method-card .strip{height:4px}
+.method-card.t-広告 .strip{background:var(--red)}
+.method-card.t-営業 .strip{background:var(--ok)}
+.method-card.t-媒介 .strip{background:#2563eb}
+.method-card.t-CRM .strip{background:#7c3aed}
+.method-card.t-toC .strip{background:#f97316}
+.method-card-body{padding:16px}
+.method-head{display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:10px}
+.method-name-edit{font-size:15px; font-weight:900; letter-spacing:-.01em; border:0; padding:0; background:transparent; flex:1; min-width:0}
+.method-name-edit:focus{outline:none; border-bottom:1px dashed var(--red); border-radius:0}
+.method-type-tag{font-size:10px; font-weight:900; padding:3px 8px; border-radius:999px; letter-spacing:.04em; flex-shrink:0}
+.method-card.t-広告 .method-type-tag{background:var(--red-soft); color:var(--red)}
+.method-card.t-営業 .method-type-tag{background:var(--ok-soft); color:var(--ok)}
+.method-card.t-媒介 .method-type-tag{background:#dbeafe; color:#1e40af}
+.method-card.t-CRM .method-type-tag{background:#ede9fe; color:#5b21b6}
+.method-card.t-toC .method-type-tag{background:#ffedd5; color:#c2410c}
+.method-main{font-size:32px; font-weight:900; letter-spacing:-.04em; color:var(--ink); line-height:1; font-variant-numeric:tabular-nums}
+.method-main .unit{font-size:14px; font-weight:800; color:var(--muted); margin-left:4px}
+.method-sub{font-size:11px; color:var(--muted); margin-top:4px; font-weight:700}
+.method-params{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; border-top:1px dashed var(--line); padding-top:12px}
+.method-param{display:flex; flex-direction:column; gap:3px}
+.method-param .pl{display:flex; align-items:center; gap:4px; font-size:10px; font-weight:800; color:var(--muted); letter-spacing:.04em; text-transform:uppercase}
+.method-param input{padding:6px 8px; font-size:13px; border-radius:8px}
+.method-param.has-warn input{border-color:var(--warn); background:#fffbeb}
+.method-param .bench{font-size:10px; color:var(--muted); font-weight:600; margin-top:2px}
+.method-param .bench.warn{color:var(--warn); font-weight:800}
+.method-foot{display:flex; gap:6px; padding:10px 16px; background:var(--line-soft); border-top:1px solid var(--line)}
+.method-foot select{padding:5px 8px; font-size:11px; border-radius:6px; flex:1}
+.method-foot button{padding:5px 9px; font-size:11px; border-radius:6px}
+.method-add-card{border:2px dashed var(--line); border-radius:14px; min-height:160px; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--muted); font-weight:800; cursor:pointer; transition:all .15s; flex-direction:column; gap:4px}
+.method-add-card:hover{border-color:var(--red); color:var(--red); background:var(--red-soft)}
+.method-add-card .plus{font-size:22px; line-height:1}
+
+/* ===== Scenario ===== */
+.scenario-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:14px}
+.scenario-card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px; position:relative; transition:all .15s}
+.scenario-card.current{border-color:var(--red); box-shadow:0 0 0 3px var(--red-soft)}
+.scenario-card .sc-name{font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.06em; text-transform:uppercase}
+.scenario-card .sc-actions{font-size:11px; color:var(--muted); margin-top:6px}
+.scenario-card .sc-main{font-size:24px; font-weight:900; letter-spacing:-.04em; margin:8px 0 2px; font-variant-numeric:tabular-nums}
+.scenario-card .sc-meta{display:flex; gap:8px; font-size:11px; color:var(--muted); margin-top:6px}
+.scenario-card .sc-status{position:absolute; top:10px; right:10px; font-size:9px; padding:2px 7px; border-radius:999px; font-weight:900; letter-spacing:.04em}
+.scenario-card .sc-status.green{background:var(--ok-soft); color:var(--ok)}
+.scenario-card .sc-status.yellow{background:var(--warn-soft); color:var(--warn)}
+.scenario-card .sc-status.red{background:var(--bad-soft); color:var(--bad)}
+.scenario-card .sc-buttons{display:flex; gap:4px; margin-top:10px}
+
+/* ===== Tables ===== */
+.table-wrap{overflow:auto; border:1px solid var(--line); border-radius:14px; background:#fff}
+table{width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums}
+th,td{padding:10px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--line)}
+th{background:var(--line-soft); color:var(--ink-2); font-weight:800; font-size:11px; letter-spacing:.04em; text-transform:uppercase; position:sticky; top:0; z-index:1}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:var(--red-soft)}
+.neg{color:var(--bad); font-weight:800}
+.pos{color:var(--ok); font-weight:800}
+.warn{color:var(--warn); font-weight:800}
+
+/* ===== Log Entry ===== */
+.log-row{display:grid; grid-template-columns:80px 1fr 100px 100px 90px 90px 40px; gap:8px; align-items:center; padding:10px 0; border-bottom:1px dashed var(--line); font-size:13px}
+.log-row .delta{font-weight:900; font-variant-numeric:tabular-nums}
+@media(max-width:720px){.log-row{grid-template-columns:1fr 1fr; gap:6px}}
+
+/* ===== Misc ===== */
+.callout{border-left:4px solid var(--red); background:var(--red-soft); padding:12px 16px; border-radius:10px; margin:14px 0; font-size:13px; line-height:1.65}
+.callout.ok{border-color:var(--ok); background:var(--ok-soft); color:var(--ok)}
+.callout.warn{border-color:var(--warn); background:var(--warn-soft); color:var(--warn)}
+.formula-box{background:#0f1014; color:#f9fafb; border-radius:12px; padding:14px 16px; overflow:auto; font-family:'SF Mono',monospace; font-size:13px; line-height:1.7}
+.formula-box strong{color:#fca5a5}
+.collapse-head{display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:8px 0}
+.collapse-head .chev{transition:transform .2s}
+.collapse-head.open .chev{transform:rotate(180deg)}
+.collapse-body{display:none; padding-top:8px}
+.collapse-body.open{display:block}
+
+.footer{text-align:center; color:var(--muted); font-size:11px; padding:30px 24px 12px}
+
+/* ===== Empty state ===== */
+.empty{text-align:center; padding:40px 20px; color:var(--muted)}
+.empty .em-icon{font-size:36px; margin-bottom:8px}
+.empty .em-title{font-size:15px; font-weight:800; color:var(--ink-2)}
+.empty .em-sub{font-size:12px; margin-top:4px}
+
+@media print{
+  .topbar,.tabs,.btn,.icon-btn,.match-picker{display:none!important}
+  body{background:#fff}
+  .card{box-shadow:none; page-break-inside:avoid}
+}
+</style>
 </head>
 <body>
-  <main class="browser">
-    <section class="page">
-      <div class="top-rule"></div>
-      <header>
-        <h1>掲載日から逆算した <span class="red">OOH</span>進行目安</h1>
-        <div class="subtitle">T＝掲載日／掲出開始日</div>
-        <div class="note-line">実績ベース＋安全運用ベースの目安</div>
-      </header>
 
-      <section class="date-panel" aria-label="掲載日入力">
-        <div class="date-panel-head">
-          <span>日付入力</span>
-          <span class="mini">掲載開始日を基準に、各T日程を自動計算</span>
+<!-- ===== Top Bar ===== -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">浦</div>
+      <div class="brand-text">
+        <div class="t1">URAWA REDS · Marketing</div>
+        <div class="t2">来場目標逆算ダッシュボード v7</div>
+      </div>
+    </div>
+    <div class="match-pill summary-pill" id="matchPill" aria-live="polite">
+      <div class="num" id="pillNum">日</div>
+      <div class="info">
+        <div class="date" id="pillDate">試合日未設定</div>
+        <div class="name" id="pillName">目標未設定</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" onclick="exportJSON()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        書き出し
+      </button>
+      <button class="icon-btn" onclick="importJSON()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 21V9m0 0l-4 4m4-4l4 4M5 3h14"/></svg>
+        読み込み
+      </button>
+      <button class="icon-btn" onclick="window.print()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9V3h12v6M6 18H4a1 1 0 01-1-1v-6a1 1 0 011-1h16a1 1 0 011 1v6a1 1 0 01-1 1h-2M6 14h12v7H6z"/></svg>
+        印刷
+      </button>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ===== Verdict ===== -->
+  <section class="section">
+    <div class="verdict" id="verdict">
+      <div class="verdict-inner">
+        <div class="verdict-header">
+          <span class="label">今日の結論</span>
+          <span class="verdict-status" id="verdictStatus"><span class="dot"></span><span id="verdictStatusText">—</span></span>
         </div>
-        <div class="date-controls">
-          <div class="date-field">
-            <label for="startDate">掲載開始日</label>
-            <input id="startDate" type="date" />
-            <div class="weekday-badge" id="startWeekday">--</div>
+        <div class="verdict-headline" id="verdictHeadline">試合日と目標来場者数を入力してください</div>
+        <div class="verdict-sub" id="verdictSub">日付と目標を入力すると、目標達成までの状況と推奨アクションが表示されます。</div>
+        <div class="verdict-grid">
+          <div class="verdict-cell" id="cellGap">
+            <div class="l">あと必要な一般券売</div>
+            <div class="v" id="vGapG">—</div>
+            <div class="s" id="sGapG">目標 — 人に対する不足分</div>
           </div>
-          <div class="date-field">
-            <label for="endDate">掲載終了日<br />＝試合日</label>
-            <input id="endDate" type="date" />
-            <div class="weekday-badge" id="endWeekday">--</div>
+          <div class="verdict-cell" id="cellDays">
+            <div class="l">試合日まで</div>
+            <div class="v" id="vDays">—</div>
+            <div class="s" id="sDays">—</div>
+          </div>
+          <div class="verdict-cell" id="cellPace">
+            <div class="l">週次必要ペース</div>
+            <div class="v" id="vPace">—</div>
+            <div class="s" id="sPace">残不足 ÷ 残週</div>
           </div>
         </div>
-        <dl class="date-output">
-          <div class="date-chip"><dt>掲載期間</dt><dd id="periodText">日付を入力してください</dd></div>
-          <div class="date-chip"><dt>T基準</dt><dd id="baseText">掲載開始日</dd></div>
-          <div class="date-chip"><dt>試合日</dt><dd id="matchText">未入力</dd></div>
-        </dl>
-      </section>
+      </div>
+    </div>
+  </section>
 
-      <div class="layout">
-        <section class="timeline" aria-label="OOH進行タイムライン">
-          <article class="step" data-offset-start="-45" data-offset-end="-35">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="10" width="32" height="30" rx="3"></rect><line x1="8" y1="18" x2="40" y2="18"></line><line x1="16" y1="6" x2="16" y2="13"></line><line x1="32" y1="6" x2="32" y2="13"></line><path d="M16 25h4M24 25h4M32 25h4M16 32h4M24 32h4M32 32h4"></path></svg></div></div>
-            <div class="num-cell"><span class="num">1</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-45〜T-35</span><span class="task">｜掲載方針の整理</span></div><div class="actual-date"></div><ul><li>対象試合・期間・目的を決める</li><li>誰に見せたいかを整理</li><li>予算感、OOH／Web／SNSの役割を仮決め</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-35" data-offset-end="-30">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="fill" cx="16" cy="20" r="6"></circle><circle class="fill" cx="31" cy="22" r="5"></circle><path class="fill" d="M6 38c1-8 6-12 10-12s9 4 10 12H6zM25 38c1-6 5-10 9-10s7 4 8 10H25z"></path><rect x="27" y="6" width="15" height="9" rx="3"></rect><path d="M31 15l-3 4"></path></svg></div></div>
-            <div class="num-cell"><span class="num">2</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-35〜T-30</span><span class="task">｜媒体・掲出場所の相談</span></div><div class="actual-date"></div><ul><li>代理店へ相談</li><li>掲出駅、サイズ、期間、空き枠を確認</li><li>見積もり依頼、仕様確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-30" data-offset-end="-25">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 6h18l8 8v28H12z"></path><path d="M30 6v10h10"></path><path d="M18 22h14M18 29h10"></path><path d="M32 34l8-8 4 4-8 8-6 2z"></path></svg></div></div>
-            <div class="num-cell"><span class="num">3</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-30〜T-25</span><span class="task">｜企画・構成の確定</span></div><div class="actual-date"></div><ul><li>訴求軸を決める</li><li>1試合訴求か複数試合訴求かを整理</li><li>コピー、試合情報、ロゴ、QR、注意事項を整理</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-25" data-offset-end="-21">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="7" y="10" width="34" height="24" rx="2"></rect><path d="M18 40h12M24 34v6M24 16l5 7-5 9-5-9zM24 16v10"></path></svg></div></div>
-            <div class="num-cell"><span class="num">4</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-25〜T-21</span><span class="task">｜デザイン初稿</span></div><div class="actual-date"></div><ul><li>ラフ制作</li><li>素材回収</li><li>ファクトチェック</li><li>広告主表記、QR遷移を確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-21" data-offset-end="-20">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="12" y="10" width="24" height="32" rx="3"></rect><path d="M19 10a5 5 0 0 1 10 0M18 20h10M18 27h8M17 34l3 3 6-7"></path><circle cx="35" cy="35" r="8"></circle><path d="M31 35l3 3 6-7"></path></svg></div></div>
-            <div class="num-cell"><span class="num">5</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-21〜T-20</span><span class="task">｜考査用データFIX</span></div><div class="actual-date"></div><ul><li>考査提出用データを書き出し</li><li>文言・表記・構成を原則確定</li><li>修正可能性のある箇所を整理</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-20" data-offset-end="-18">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path class="fill" d="M24 6l12 14h-8v12h-8V20h-8z"></path><path d="M10 31v9h28v-9M16 36h16"></path></svg></div></div>
-            <div class="num-cell"><span class="num">6</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-20〜T-18</span><span class="task">｜考査提出</span></div><div class="actual-date"></div><ul><li>代理店へ送付</li><li>媒体社／電鉄各社へ展開</li><li>承認期限と最終納品日を確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-18" data-offset-end="-15">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M38 18a14 14 0 0 0-24-6l-5 5"></path><path d="M9 8v9h9"></path><path d="M10 30a14 14 0 0 0 24 6l5-5"></path><path d="M39 40v-9h-9"></path></svg></div></div>
-            <div class="num-cell"><span class="num">7</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-18〜T-15</span><span class="task">｜考査戻し・修正対応</span></div><div class="actual-date"></div><ul><li>指摘反映</li><li>文言修正</li><li>ロゴ位置、権利表記、価格・条件を確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-15" data-offset-end="-12">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="24" cy="18" r="11"></circle><path d="M19 18l4 4 7-8M17 29l-5 13 10-5 2 5 4-13M31 29l5 13-10-5-2 5-4-13"></path></svg></div></div>
-            <div class="num-cell"><span class="num">8</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-15〜T-12</span><span class="task">｜最終意匠FIX</span></div><div class="actual-date"></div><ul><li>考査承認後に最終化</li><li>試合日、曜日、会場、価格、対象条件を再確認</li><li>社内共有</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-12" data-offset-end="-10">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 5h18l7 7v31H13z"></path><path d="M31 5v9h8"></path><rect class="fill" x="8" y="25" width="26" height="12" rx="2"></rect><text x="11" y="34" font-size="7" fill="#fff" font-family="Arial" font-weight="700">PDF</text></svg></div></div>
-            <div class="num-cell"><span class="num">9</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-12〜T-10</span><span class="task">｜入稿データ作成</span></div><div class="actual-date"></div><ul><li>印刷用データ作成</li><li>サイズ、塗り足し、解像度確認</li><li>納品先ごとの指定確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-10" data-offset-end="-7">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 17V7h20v10"></path><rect x="9" y="17" width="30" height="18" rx="3"></rect><path d="M15 29h18v13H15zM15 23h4"></path></svg></div></div>
-            <div class="num-cell"><span class="num">10</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-10〜T-7</span><span class="task">｜印刷・納品</span></div><div class="actual-date"></div><ul><li>印刷会社へ入稿</li><li>納品先へ発送／手配</li><li>必要書類の同封／納品完了連絡</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-7" data-offset-end="-3">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><circle cx="21" cy="21" r="12"></circle><path d="M30 30l11 11"></path></svg></div></div>
-            <div class="num-cell"><span class="num">11</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-7〜T-3</span><span class="task">｜掲出前確認</span></div><div class="actual-date"></div><ul><li>納品完了確認</li><li>掲出作業予定確認</li><li>社内共有用メモ整理</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="-1" data-offset-end="-1">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="13" y="8" width="24" height="34" rx="3"></rect><path d="M19 8a5 5 0 0 1 10 0M19 19h12M19 26h12M19 33h12M13 19h-3M13 26h-3M13 33h-3"></path></svg></div></div>
-            <div class="num-cell"><span class="num">12</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T-1</span><span class="task">｜最終確認</span></div><div class="actual-date"></div><ul><li>掲出開始日の再確認</li><li>写真報告タイミング確認</li><li>連動投稿の準備</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="0" data-offset-end="0">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path class="fill" d="M7 19h8v10H7zM17 18l20-9v30l-20-9z"></path><path d="M37 20c3 2 3 6 0 8"></path></svg></div></div>
-            <div class="num-cell"><span class="num">13</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T</span><span class="task">｜掲載開始／掲出開始</span></div><div class="actual-date"></div><ul><li>掲出開始</li><li>当日中に可能なら写真確認</li><li>社内へ開始報告</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="1" data-offset-end="3">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="8" y="16" width="32" height="22" rx="4"></rect><path d="M17 16l3-6h9l3 6"></path><circle cx="24" cy="27" r="7"></circle></svg></div></div>
-            <div class="num-cell"><span class="num">14</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T+1〜T+3</span><span class="task">｜掲出報告確認</span></div><div class="actual-date"></div><ul><li>掲出写真確認</li><li>掲出漏れ、誤掲出、視認性を確認</li><li>必要に応じて代理店へ確認</li></ul></div>
-          </article>
-
-          <article class="step" data-offset-start="7" data-offset-end="7">
-            <div class="icon-cell"><div class="icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M8 40h34"></path><rect class="fill" x="12" y="26" width="6" height="12"></rect><rect class="fill" x="23" y="18" width="6" height="20"></rect><rect class="fill" x="34" y="10" width="6" height="28"></rect><path d="M10 18l9-7 8 5 13-12"></path></svg></div></div>
-            <div class="num-cell"><span class="num">15</span></div>
-            <div class="step-body"><div class="step-title"><span class="term">T+7〜掲載終了後</span><span class="task">｜精算・振り返り</span></div><div class="actual-date"></div><ul><li>請求タイミング整理</li><li>掲出報告書を保管</li><li>次回改善点をメモ</li></ul></div>
-          </article>
-        </section>
-
-        <aside class="side">
-          <section class="card" aria-label="まず守る3つ">
-            <div class="card-title-red">まず守る3つ</div>
-            <div class="must-row"><div class="circle-icon">✓</div><div class="must-text"><span class="small">T-20：</span><span class="big">考査提出</span></div></div>
-            <div class="must-row"><div class="circle-icon">▣</div><div class="must-text"><span class="small">T-10：</span><span class="big">印刷入稿</span></div></div>
-            <div class="must-row"><div class="circle-icon">□</div><div class="must-text"><span class="small">T-7：</span><span class="big">納品完了</span></div></div>
-            <div class="mini-alert"><span class="alert-icon">!</span><span>この3点を赤字ルール化すると<br />事故が減る</span></div>
-          </section>
-
-          <section class="black-card" aria-label="実績から見える目安">
-            <div class="black-title">実績から見える目安</div>
-            <div class="evidence-row"><div class="small-round-icon">▦</div><div>考査提出：<span class="red">T-18〜T-20前後</span></div></div>
-            <div class="evidence-row"><div class="small-round-icon">◷</div><div>考査承認：<span class="red">翌日〜数日</span></div></div>
-            <div class="evidence-row"><div class="small-round-icon">▰</div><div>納品完了：<span class="red">T-7〜T-10前後</span></div></div>
-            <div class="evidence-row"><div class="small-round-icon">⬟</div><div>安全運用なら<span class="red">少し前倒し推奨</span></div></div>
-          </section>
-
-          <section class="notice-card" aria-label="前提・注意">
-            <div class="notice-head"><span class="notice-icon">▣</span><span>前提・注意</span></div>
-            <ul>
-              <li>土日祝、印刷会社、媒体社都合を見て1〜3営業日前倒し推奨</li>
-              <li>新規媒体、複数駅、スポンサー表記あり案件は余白を厚めに</li>
-              <li>公共交通系は考査と納品のズレに注意</li>
-            </ul>
-          </section>
-        </aside>
+  <!-- ===== Inputs (target, ST, invite, current sales) ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">01</span>
+      <h2>目標と現状</h2>
+      <span class="desc">試合名なし。日付と目標を入れて逆算します</span>
+    </div>
+    <div class="card elevated">
+      <div class="grid grid-4">
+        <div class="input-block">
+          <label>試合日
+            <span class="help" data-tip="対象試合の日付。試合名や対戦相手は入力不要です。">?</span>
+          </label>
+          <input id="iMatchDate" type="date" oninput="onInput()">
+        </div>
+        <div class="input-block">
+          <label>目標来場者数
+            <span class="help" data-tip="この試合で実現したい来場者数。スタジアムの席数や昨年実績を参考に。">?</span>
+          </label>
+          <input id="iTarget" type="number" min="0" oninput="onInput()">
+        </div>
+        <div class="input-block">
+          <label>現在の一般券売
+            <span class="help" data-tip="集計時点までに販売済みの一般券売枚数。最新値を入れてください。">?</span>
+          </label>
+          <input id="iCurrentG" type="number" min="0" oninput="onInput()">
+        </div>
+        <div class="input-block">
+          <label>自然販売の追加見込
+            <span class="help" data-tip="このまま何もしなくても積み上がりそうな枚数。控えめに置くのが推奨。">?</span>
+          </label>
+          <input id="iNaturalG" type="number" min="0" oninput="onInput()">
+        </div>
       </div>
 
-      <section class="footer-notice" aria-label="前提・注意のまとめ">
-        <div class="footer-title"><span class="triangle" aria-hidden="true"></span><span>前提・注意</span></div>
-        <ul>
-          <li>土日祝、印刷会社、媒体社都合を見て1〜3営業日前倒し推奨</li>
-          <li>新規媒体、複数駅、スポンサー表記あり案件は余白を厚めに</li>
-          <li>公共交通系は考査と納品のズレに注意</li>
-        </ul>
-      </section>
-    </section>
-  </main>
+      <div class="collapse-head" onclick="toggleCol(this)">
+        <strong style="font-size:13px; color:var(--ink-2)">▸ ST系・招待・係数を見る／変更する</strong>
+        <span class="chev" style="color:var(--muted); font-size:11px">▾</span>
+      </div>
+      <div class="collapse-body">
+        <div class="grid grid-4" style="margin-top:10px">
+          <div class="input-block">
+            <label>需要セグメント
+              <span class="help" data-tip="一般券売の見込みボリュームによって自動分類。必要な場合だけ手動で切替。">?</span>
+            </label>
+            <select id="iSegment" onchange="onSegmentChange()">
+              <option value="auto">自動判定</option>
+              <option value="high">高需要（25k以上）</option>
+              <option value="mid">中需要（15k〜25k）</option>
+              <option value="low">低需要（15k未満）</option>
+            </select>
+          </div>
+          <div class="input-block">
+            <label>ST + RBC 枚数
+              <span class="help" data-tip="シーズンチケット＋RBC会員数。年間権利保有者として扱う。">?</span>
+            </label>
+            <input id="iST" type="number" min="0" oninput="onInput()">
+          </div>
+          <div class="input-block">
+            <label>招待枚数
+              <span class="help" data-tip="招待として配布する券種の合計枚数。未確定なら3,000で仮置き。">?</span>
+            </label>
+            <input id="iInvite" type="number" min="0" oninput="onInput()">
+          </div>
+          <div class="input-block">
+            <label>ST系来場率
+              <span class="help" data-tip="ST + RBC のうち実際に来場する割合。需要セグメントから自動設定。">?</span>
+            </label>
+            <input id="iRs" type="number" step="0.001" min="0" max="1" oninput="onInput()">
+          </div>
+          <div class="input-block">
+            <label>一般券売来場率
+              <span class="help" data-tip="販売した一般券売のうち実際に来場する割合。">?</span>
+            </label>
+            <input id="iRg" type="number" step="0.001" min="0" max="1" oninput="onInput()">
+          </div>
+        </div>
+      </div>
 
-  <script>
-    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+      <!-- Composition stack -->
+      <div style="margin-top:22px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px">
+          <strong style="font-size:13px">目標来場の構成</strong>
+          <span style="font-size:11px; color:var(--muted)" id="compLabel">—</span>
+        </div>
+        <div class="comp-bar">
+          <div class="comp-marker" id="compMarker"><span class="badge">目標</span></div>
+          <div id="compSegs" style="display:flex; width:100%; height:100%"></div>
+        </div>
+        <div class="legend" id="compLegend"></div>
+      </div>
 
-    const startInput = document.getElementById("startDate");
-    const endInput = document.getElementById("endDate");
-    const startWeekday = document.getElementById("startWeekday");
-    const endWeekday = document.getElementById("endWeekday");
-    const periodText = document.getElementById("periodText");
-    const baseText = document.getElementById("baseText");
-    const matchText = document.getElementById("matchText");
+      <div class="grid grid-4" style="margin-top:18px">
+        <div class="kpi-mini">
+          <div style="font-size:11px; color:var(--muted); font-weight:800">ST系来場見込</div>
+          <div style="font-size:22px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums" id="kST">—</div>
+        </div>
+        <div class="kpi-mini">
+          <div style="font-size:11px; color:var(--muted); font-weight:800">招待来場見込</div>
+          <div style="font-size:22px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums" id="kInv">—</div>
+        </div>
+        <div class="kpi-mini">
+          <div style="font-size:11px; color:var(--muted); font-weight:800">必要一般券売 総数</div>
+          <div style="font-size:22px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums; color:var(--red)" id="kReq">—</div>
+        </div>
+        <div class="kpi-mini">
+          <div style="font-size:11px; color:var(--muted); font-weight:800">予測来場（施策込）</div>
+          <div style="font-size:22px; font-weight:900; letter-spacing:-.03em; font-variant-numeric:tabular-nums" id="kPred">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    function parseDate(value) {
-      if (!value) return null;
-      const [year, month, day] = value.split("-").map(Number);
-      return new Date(year, month - 1, day);
+  <!-- ===== Pace / Lead time ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">02</span>
+      <h2>時間軸とペース</h2>
+      <span class="desc">「いつまでに何枚」を可視化</span>
+    </div>
+    <div class="card elevated">
+      <div class="pace-board">
+        <div>
+          <strong style="font-size:13px">残日数と販売ペース</strong>
+          <div class="pace-row"><span class="label">試合日</span><span class="value" id="paceDate">—</span></div>
+          <div class="pace-row"><span class="label">残日数</span><span class="value" id="paceDays">—</span></div>
+          <div class="pace-row"><span class="label">残週数（端数切り上げ）</span><span class="value" id="paceWeeks">—</span></div>
+          <div class="pace-row"><span class="label">不足枚数</span><span class="value" id="paceGap">—</span></div>
+          <div class="pace-row"><span class="label">必要な週次ペース</span><span class="value" id="paceWeekly">—</span></div>
+          <div class="pace-row"><span class="label">必要な日次ペース</span><span class="value" id="paceDaily">—</span></div>
+        </div>
+        <div>
+          <strong style="font-size:13px">施策別の発射リードタイム</strong>
+          <p style="font-size:12px; color:var(--muted); margin:6px 0 14px">いま施策を仕込んだとして、効果が出始めるまでの目安時間との比較。間に合わない施策は警告。</p>
+          <div class="lead-bar" id="leadBar"></div>
+          <div id="leadWarnings"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Methods ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">03</span>
+      <h2>施策プランニング</h2>
+      <span class="desc">どの施策で何枚積めるか・現実的か</span>
+    </div>
+    <div class="card elevated">
+      <div class="callout">
+        <strong>見方：</strong>各カードの大きな数字が「この施策で積める一般券売枚数」。パラメータが過去実績レンジから外れている場合は黄色で警告します。<span class="mono" style="font-size:12px">ActionG = N × R × A × C × T × U</span>
+      </div>
+
+      <div class="method-grid" id="methodGrid"></div>
+
+      <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn primary" onclick="addMethod()">＋ 施策を追加</button>
+        <button class="btn ghost" onclick="resetMethods()">デフォルトに戻す</button>
+        <button class="btn ghost" onclick="document.getElementById('methodDetail').scrollIntoView({behavior:'smooth'})">詳細テーブルで編集</button>
+      </div>
+
+      <details id="methodDetail" style="margin-top:24px">
+        <summary style="cursor:pointer; font-weight:800; font-size:13px; color:var(--ink-2); padding:8px 0">▸ 一覧テーブルで一気に編集する</summary>
+        <div class="table-wrap" style="margin-top:10px">
+          <table id="methodTable">
+            <thead><tr>
+              <th>施策名</th><th>タイプ</th>
+              <th>母数N</th><th>到達R</th><th>反応A</th><th>購入C</th><th>枚数T</th><th>重複U</th>
+              <th>結果</th><th></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===== Scenarios ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">04</span>
+      <h2>シナリオ比較</h2>
+      <span class="desc">A案・B案・C案を保存して並べる</span>
+    </div>
+    <div class="card elevated">
+      <p style="font-size:13px; color:var(--muted); margin:0 0 8px">
+        現在の入力と施策の組み合わせを「シナリオ」として保存し、別の組み合わせと比較できます。<br>
+        例：A=広告強化 / B=学校媒介に寄せる / C=団体営業倍増 など。
+      </p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px">
+        <input id="scName" type="text" placeholder="シナリオ名（例: A案・広告強化）" style="flex:1; min-width:200px">
+        <button class="btn primary" onclick="saveScenario()">現在の設定を保存</button>
+      </div>
+      <div class="scenario-grid" id="scenarioGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===== Action Log (benchmark) ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">05</span>
+      <h2>施策実績ログ</h2>
+      <span class="desc">過去施策の予測と実績を記録→ベンチマーク化</span>
+    </div>
+    <div class="card elevated">
+      <p style="font-size:13px; color:var(--muted); margin:0 0 12px">
+        実施した施策の「予測ActionG」と「実績ActionG」を記録すると、次回以降のパラメータ入力時にベンチマークとして比較・警告できます。
+      </p>
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr 1fr; gap:8px">
+        <input id="logName" type="text" placeholder="施策名">
+        <select id="logType">
+          <option>広告</option><option>営業</option><option>媒介</option><option>CRM</option><option>toC</option>
+        </select>
+        <input id="logPred" type="number" placeholder="予測枚数">
+        <input id="logAct" type="number" placeholder="実績枚数">
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn primary" onclick="addLog()">＋ ログ追加</button>
+        <button class="btn ghost" onclick="exportLogs()">CSVで書き出し</button>
+      </div>
+      <div id="logList" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ===== Reference (collapsed) ===== -->
+  <section class="section">
+    <div class="section-title">
+      <span class="num">06</span>
+      <h2>参考資料</h2>
+      <span class="desc">モデルの式と過去実績の検証</span>
+    </div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="showTab(event,'tab-model')">数理モデル</button>
+        <button class="tab" onclick="showTab(event,'tab-validation')">実績検証</button>
+        <button class="tab" onclick="showTab(event,'tab-formula')">数式一覧</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-model">
+        <div class="grid grid-2">
+          <div>
+            <h3 style="margin-top:0">基本式</h3>
+            <div class="formula-box"><strong>A</strong> = S × Rs(d) + G × Rg(d) + I × Ri</div>
+            <ul style="font-size:13px; line-height:1.9; padding-left:20px; margin-top:10px">
+              <li><strong>A</strong> = 来場見込</li>
+              <li><strong>S</strong> = ST + RBC（年間権利保有者）</li>
+              <li><strong>G</strong> = 一般券売枚数</li>
+              <li><strong>I</strong> = 招待枚数</li>
+              <li><strong>Rs/Rg/Ri</strong> = 各券種の来場率</li>
+              <li><strong>d</strong> = 需要セグメント</li>
+            </ul>
+          </div>
+          <div>
+            <h3 style="margin-top:0">需要別係数</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>需要</th><th>Rs</th><th>Rg</th><th>Ri</th></tr></thead>
+                <tbody>
+                  <tr><td>低需要</td><td>72.5%</td><td>92.5%</td><td>70%</td></tr>
+                  <tr><td>中需要</td><td>82.0%</td><td>96.0%</td><td>70%</td></tr>
+                  <tr><td>高需要</td><td>85.0%</td><td>97.5%</td><td>70%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p style="font-size:12px; color:var(--muted); margin-top:8px">対戦相手・曜日・企画強度で手動補正OK。</p>
+          </div>
+        </div>
+        <div class="formula-box" style="margin-top:14px">
+          <strong>逆算式</strong><br>
+          必要一般券売 = MAX(0, (目標 − S×Rs − I×Ri) ÷ Rg)<br>
+          追加必要一般券売 = MAX(0, 必要 − 現在 − 自然販売 − 施策見込)
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-validation">
+        <div class="grid grid-4" style="margin-bottom:14px">
+          <div class="kpi-mini"><div style="font-size:11px;color:var(--muted);font-weight:800">検証試合数</div><div style="font-size:22px;font-weight:900">18試合</div></div>
+          <div class="kpi-mini"><div style="font-size:11px;color:var(--muted);font-weight:800">招待枚数平均</div><div style="font-size:22px;font-weight:900">3,764枚</div></div>
+          <div class="kpi-mini"><div style="font-size:11px;color:var(--muted);font-weight:800">v2 MAPE</div><div style="font-size:22px;font-weight:900">4.5%</div></div>
+          <div class="kpi-mini"><div style="font-size:11px;color:var(--muted);font-weight:800">v3 MAPE</div><div style="font-size:22px;font-weight:900;color:var(--ok)">3.1%</div></div>
+        </div>
+        <div class="table-wrap" style="max-height:380px; overflow:auto">
+          <table id="validateTable">
+            <thead><tr><th>年</th><th>対戦</th><th>需要</th><th>実績</th><th>一般</th><th>招待</th><th>ST+RBC</th><th>v3予測</th><th>v3誤差</th><th>v3 MAPE</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-formula">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>用途</th><th>Excel式</th><th>意味</th></tr></thead>
+            <tbody>
+              <tr><td>来場見込</td><td class="mono" style="text-align:left">=S*Rs + G*Rg + I*Ri</td><td style="text-align:left">基本式</td></tr>
+              <tr><td>必要一般券売</td><td class="mono" style="text-align:left">=MAX(0,(Target-S*Rs-I*Ri)/Rg)</td><td style="text-align:left">逆算後の必要総枚数</td></tr>
+              <tr><td>追加必要枚数</td><td class="mono" style="text-align:left">=MAX(0,Req-Current-Natural-Action)</td><td style="text-align:left">不足分</td></tr>
+              <tr><td>施策別枚数</td><td class="mono" style="text-align:left">=N*R*A*C*T*U</td><td style="text-align:left">広告・営業・媒介・CRMで共通</td></tr>
+              <tr><td>週次ペース</td><td class="mono" style="text-align:left">=不足枚数 / CEILING(残日数/7,1)</td><td style="text-align:left">今週何枚売る必要があるか</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">URAWA REDS Marketing · 来場目標逆算ダッシュボード v7 · 状態はブラウザ内に自動保存されます</footer>
+
+<script>
+/* ==========================================================================
+   Data & State
+   ========================================================================== */
+
+// 過去施策のベンチマークレンジ（過去実績から、施策タイプ別に妥当な値域）
+// 実績ログが溜まると更新されていく想定
+const BENCHMARKS = {
+  '広告': {reach:[.8,1.0], response:[.005,.025], purchase:[.02,.08], avg:[1.5,2.5], overlap:[.7,.95]},
+  '営業': {reach:[.4,.85], response:[.25,.55], purchase:[.35,.7], avg:[10,40], overlap:[.8,1]},
+  '媒介': {reach:[.25,.6], response:[.01,.04], purchase:[.15,.4], avg:[2,3.5], overlap:[.75,.95]},
+  'CRM':  {reach:[.4,.8], response:[.015,.06], purchase:[.08,.2], avg:[1.5,2.5], overlap:[.4,.75]},
+  'toC':  {reach:[.15,.5], response:[.005,.025], purchase:[.03,.08], avg:[1.5,3], overlap:[.6,.9]}
+};
+
+// 施策別の発射リードタイム（日数の目安：これより遅いと間に合わない）
+const LEAD_TIME_DAYS = {
+  '広告': 1,    // 即時配信可能
+  'CRM': 2,     // メール作成・承認
+  'toC': 5,     // SNS企画・素材
+  '媒介': 14,   // 学校・地域への打診
+  '営業': 21    // 団体への営業活動
+};
+
+const DEFAULT_METHODS = [
+  {name:'広告配信', type:'広告', base:500000, reach:1.0, response:.012, purchase:.04, avg:2.0, overlap:.85},
+  {name:'団体営業', type:'営業', base:120, reach:.6, response:.4, purchase:.5, avg:25, overlap:.9},
+  {name:'学校・地域経由', type:'媒介', base:20000, reach:.4, response:.02, purchase:.25, avg:2.5, overlap:.85},
+  {name:'REX/過去購入者配信', type:'CRM', base:50000, reach:.6, response:.03, purchase:.12, avg:2.0, overlap:.6},
+  {name:'toC企画・SNS波及', type:'toC', base:200000, reach:.3, response:.01, purchase:.05, avg:2.2, overlap:.75}
+];
+
+const SEG_COEF = {
+  low:  {label:'低需要', rs:.725, rg:.925},
+  mid:  {label:'中需要', rs:.82, rg:.96},
+  high: {label:'高需要', rs:.85, rg:.975}
+};
+
+const DEFAULT_MATCHES = [
+  {id:'plan-default', date:'', round:'', opponent:'対象試合', kickoff:'', target:40000, st:18460, invite:3000, currentG:0, naturalG:0, segment:'auto', methods:JSON.parse(JSON.stringify(DEFAULT_METHODS))}
+];
+
+const VALIDATION_DATA = [
+  {year:2025,opp:'柏レイソル',seg:'高',actual:51009,general:31200,invite:3208,st:20402,v3:50007,err:1002,mape:0.020},
+  {year:2025,opp:'ファジアーノ岡山',seg:'中',actual:35269,general:18737,invite:2815,st:20456,v3:36732,err:-1463,mape:0.041},
+  {year:2025,opp:'京都サンガ',seg:'低',actual:21383,general:6258,invite:2622,st:20590,v3:22552,err:-1169,mape:0.055},
+  {year:2025,opp:'横浜F・マリノス',seg:'中',actual:41981,general:22694,invite:3929,st:20590,v3:41420,err:561,mape:0.013},
+  {year:2025,opp:'サンフレッチェ広島',seg:'低',actual:28555,general:12152,invite:2426,st:20620,v3:27888,err:667,mape:0.023},
+  {year:2025,opp:'東京ヴェルディ',seg:'高',actual:52429,general:33205,invite:3395,st:20620,v3:52278,err:151,mape:0.003},
+  {year:2025,opp:'ガンバ大阪',seg:'高',actual:41770,general:25410,invite:3411,st:20620,v3:44689,err:-2919,mape:0.070},
+  {year:2025,opp:'FC東京',seg:'中',actual:36002,general:19071,invite:3763,st:20620,v3:37851,err:-1849,mape:0.051},
+  {year:2025,opp:'湘南',seg:'低',actual:26977,general:11567,invite:3141,st:20620,v3:27848,err:-871,mape:0.032},
+  {year:2025,opp:'名古屋',seg:'高',actual:45652,general:26543,invite:3763,st:20620,v3:46041,err:-389,mape:0.009},
+  {year:2025,opp:'鹿島',seg:'高',actual:53301,general:35379,invite:4055,st:20620,v3:54860,err:-1559,mape:0.029},
+  {year:2025,opp:'川崎',seg:'高',actual:47878,general:29780,invite:5201,st:20628,v3:50210,err:-2332,mape:0.049},
+  {year:2026,opp:'鹿島アントラーズ',seg:'高',actual:52841,general:35991,invite:4742,st:18284,v3:53952,err:-1111,mape:0.021},
+  {year:2026,opp:'水戸ホーリーホック',seg:'低',actual:27571,general:13151,invite:3091,st:18284,v3:27584,err:-13,mape:0.000},
+  {year:2026,opp:'FC町田ゼルビア',seg:'中',actual:34782,general:18216,invite:4371,st:18460,v3:35684,err:-902,mape:0.026},
+  {year:2026,opp:'横浜F・マリノス',seg:'中',actual:32797,general:15796,invite:4596,st:18460,v3:33519,err:-722,mape:0.022},
+  {year:2026,opp:'川崎フロンターレ',seg:'中',actual:30780,general:15307,invite:4477,st:18460,v3:32966,err:-2186,mape:0.071},
+  {year:2026,opp:'ジェフ千葉',seg:'中',actual:41561,general:23286,invite:4752,st:18460,v3:40818,err:743,mape:0.018}
+];
+
+const TODAY_STR = '2026-05-14';
+function today(){return new Date(TODAY_STR + 'T00:00:00')}
+
+const STORAGE_KEY = 'urawa_dashboard_v7_simple';
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){return null}
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+let state = loadState() || {
+  matches: JSON.parse(JSON.stringify(DEFAULT_MATCHES)),
+  activeMatchId: DEFAULT_MATCHES[0].id,
+  scenarios: [],
+  logs: []
+};
+
+// Backfill new fields on legacy state
+if(!state.matches) state.matches = JSON.parse(JSON.stringify(DEFAULT_MATCHES));
+if(!state.scenarios) state.scenarios = [];
+if(!state.logs) state.logs = [];
+if(!state.activeMatchId || !state.matches.find(m=>m.id===state.activeMatchId)){
+  state.activeMatchId = state.matches[0]?.id;
+}
+
+function activeMatch(){
+  if(!state.matches || state.matches.length===0){
+    state.matches = JSON.parse(JSON.stringify(DEFAULT_MATCHES));
+    state.activeMatchId = state.matches[0].id;
+  }
+  return state.matches.find(m=>m.id===state.activeMatchId) || state.matches[0];
+}
+
+/* ==========================================================================
+   Helpers
+   ========================================================================== */
+function num(v){return Number(v)||0}
+function fmt(n){return Math.round(n).toLocaleString('ja-JP')}
+function fmtSigned(n){return (n>=0?'+':'')+fmt(n)}
+function pct(n,d=1){return (Number(n)*100).toFixed(d)+'%'}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+function dateDiffDays(targetStr){
+  if(!targetStr) return null;
+  const t = new Date(targetStr + 'T00:00:00');
+  const ms = t - today();
+  return Math.round(ms / 86400000);
+}
+
+function autoSegment(currentG){
+  if(currentG >= 25000) return 'high';
+  if(currentG >= 15000) return 'mid';
+  return 'low';
+}
+
+function activeSegmentKey(m){
+  if(!m) return 'high';
+  if(m.segment==='auto' || !m.segment) return autoSegment(m.currentG || 0);
+  return m.segment;
+}
+
+/* ==========================================================================
+   Calculation
+   ========================================================================== */
+function methodTickets(mth){
+  return num(mth.base)*num(mth.reach)*num(mth.response)*num(mth.purchase)*num(mth.avg)*num(mth.overlap);
+}
+function totalAction(methods){
+  return methods.reduce((s,m)=>s+methodTickets(m),0);
+}
+function computeState(m){
+  const seg = activeSegmentKey(m);
+  const c = SEG_COEF[seg];
+  // Allow custom rates override
+  const rs = num(m.rsOverride) || c.rs;
+  const rg = num(m.rgOverride) || c.rg;
+  const ri = 0.7;
+  const stAtt = num(m.st)*rs;
+  const invAtt = num(m.invite)*ri;
+  const requiredG = Math.max(0,(num(m.target)-stAtt-invAtt)/rg);
+  const action = totalAction(m.methods||[]);
+  const totalG = num(m.currentG)+num(m.naturalG)+action;
+  const gapG = Math.max(0, requiredG - totalG);
+  const currentAtt = num(m.currentG)*rg;
+  const naturalAtt = num(m.naturalG)*rg;
+  const actionAtt = action*rg;
+  const predA = stAtt + invAtt + totalG*rg;
+  const gapA = num(m.target) - predA;
+  const progressPct = requiredG>0 ? totalG/requiredG : 1;
+
+  // Time-based
+  const daysLeft = dateDiffDays(m.date);
+  const weeksLeft = daysLeft!=null ? Math.max(1, Math.ceil(daysLeft/7)) : null;
+  const weeklyPace = (daysLeft!=null && daysLeft>0 && weeksLeft) ? gapG/weeksLeft : 0;
+  const dailyPace = (daysLeft!=null && daysLeft>0) ? gapG/daysLeft : 0;
+
+  return {
+    seg, c, rs, rg, ri,
+    stAtt, invAtt, action, requiredG, totalG, gapG, currentAtt, naturalAtt, actionAtt,
+    predA, gapA, progressPct,
+    daysLeft, weeksLeft, weeklyPace, dailyPace
+  };
+}
+
+/* ==========================================================================
+   Render: Verdict (信号機)
+   ========================================================================== */
+function judgeStatus(s){
+  // Returns 'green' | 'yellow' | 'red'
+  if(s.daysLeft==null) return 'yellow';
+  if(s.daysLeft < 0) return 'green'; // 試合終了後
+  if(s.gapG <= 0) return 'green';
+  if(s.daysLeft <= 7 && s.gapG > 3000) return 'red';
+  if(s.daysLeft <= 14 && s.weeklyPace > 8000) return 'red';
+  if(s.gapG > 5000 && s.weeklyPace > 4000) return 'yellow';
+  if(s.gapG <= 2000) return 'green';
+  return 'yellow';
+}
+
+function renderVerdict(m, s){
+  const pillNum = document.getElementById('pillNum');
+  const pillDate = document.getElementById('pillDate');
+  const pillName = document.getElementById('pillName');
+
+  if(!m){
+    pillNum.textContent='日'; pillDate.textContent='試合日未設定'; pillName.textContent='目標未設定';
+    return;
+  }
+  pillNum.textContent = '日';
+  pillDate.textContent = m.date || '試合日未設定';
+  pillName.textContent = m.target ? `目標 ${fmt(m.target)}人` : '目標未設定';
+
+  const status = judgeStatus(s);
+  const statusText = {green:'順調', yellow:'要注意', red:'緊急'}[status];
+  const statusEl = document.getElementById('verdictStatus');
+  statusEl.className = 'verdict-status ' + status;
+  document.getElementById('verdictStatusText').textContent = statusText;
+
+  const segLabel = SEG_COEF[s.seg].label;
+  let headline = '';
+  let sub = '';
+  if(!m.date || !m.target){
+    headline = '試合日と目標来場者数を入力してください';
+    sub = '試合名・対戦相手・節の入力は不要です。日付と目標を入れるだけで、残日数・必要一般券売・週次ペースを逆算します。';
+  } else if(s.daysLeft==null){
+    headline = '試合日を設定してください';
+    sub = '試合日を入れると、残日数と必要ペースが計算されます。';
+  } else if(s.daysLeft < 0){
+    headline = `${m.date} の試合は終了（${Math.abs(s.daysLeft)}日前）`;
+    sub = '実績がわかったら、施策実績ログに記録してベンチマークを更新しましょう。';
+  } else if(s.gapG <= 0){
+    headline = `${m.date} / 目標達成見込み 🎉`;
+    sub = `現状の販売・自然見込・施策見込で必要な一般券売 ${fmt(s.requiredG)} 枚をクリア。+${fmt(Math.max(0,s.totalG-s.requiredG))}枚の余裕があります。`;
+  } else {
+    headline = `あと一般券売 ${fmt(s.gapG)}枚 / 週 ${fmt(s.weeklyPace)}枚 ペース必要`;
+    sub = `${m.date}（${segLabel}）の目標 ${fmt(m.target)}人 達成には、残り${s.daysLeft}日で一般券売を${fmt(s.gapG)}枚積み増す必要があります。施策プランニングで配分を組みましょう。`;
+  }
+  document.getElementById('verdictHeadline').textContent = headline;
+  document.getElementById('verdictSub').textContent = sub;
+
+  const cellGap = document.getElementById('cellGap');
+  cellGap.className = 'verdict-cell ' + (s.gapG>5000 ? 'danger' : s.gapG>2000 ? 'warn' : 'ok');
+  document.getElementById('vGapG').textContent = fmt(s.gapG) + '枚';
+  document.getElementById('sGapG').textContent = `目標 ${fmt(m.target||0)} 人 / 必要総数 ${fmt(s.requiredG)}枚`;
+
+  const cellDays = document.getElementById('cellDays');
+  if(s.daysLeft==null){
+    document.getElementById('vDays').textContent = '—';
+    document.getElementById('sDays').textContent = '試合日未設定';
+    cellDays.className='verdict-cell';
+  } else if(s.daysLeft<0){
+    document.getElementById('vDays').textContent = '終了';
+    document.getElementById('sDays').textContent = `${Math.abs(s.daysLeft)}日前`;
+    cellDays.className='verdict-cell';
+  } else {
+    document.getElementById('vDays').textContent = s.daysLeft + '日';
+    document.getElementById('sDays').textContent = `試合日: ${m.date}`;
+    cellDays.className = 'verdict-cell ' + (s.daysLeft<7 ? 'danger' : s.daysLeft<14 ? 'warn' : 'ok');
+  }
+
+  const cellPace = document.getElementById('cellPace');
+  if(s.daysLeft==null || s.daysLeft<=0 || s.gapG<=0){
+    document.getElementById('vPace').textContent = '—';
+    document.getElementById('sPace').textContent = s.gapG<=0 ? '不足なし' : '日程未設定';
+    cellPace.className='verdict-cell ok';
+  } else {
+    document.getElementById('vPace').textContent = fmt(s.weeklyPace) + '枚/週';
+    document.getElementById('sPace').textContent = `日次 ${fmt(s.dailyPace)} 枚 / 残${s.weeksLeft}週`;
+    cellPace.className = 'verdict-cell ' + (s.weeklyPace>8000 ? 'danger' : s.weeklyPace>3000 ? 'warn' : 'ok');
+  }
+}
+
+/* ==========================================================================
+   Render: Inputs (sync)
+   ========================================================================== */
+function syncInputsFromMatch(m){
+  if(!m) return;
+  document.getElementById('iMatchDate').value = m.date || '';
+  document.getElementById('iTarget').value = m.target || '';
+  document.getElementById('iST').value = m.st || '';
+  document.getElementById('iInvite').value = m.invite || '';
+  document.getElementById('iCurrentG').value = m.currentG || 0;
+  document.getElementById('iNaturalG').value = m.naturalG || 0;
+  document.getElementById('iSegment').value = m.segment || 'auto';
+  const seg = activeSegmentKey(m);
+  const c = SEG_COEF[seg];
+  document.getElementById('iRs').value = (m.rsOverride || c.rs).toFixed(3);
+  document.getElementById('iRg').value = (m.rgOverride || c.rg).toFixed(3);
+}
+
+function onInput(){
+  const m = activeMatch(); if(!m) return;
+  m.date = document.getElementById('iMatchDate').value;
+  m.target = num(document.getElementById('iTarget').value);
+  m.st = num(document.getElementById('iST').value);
+  m.invite = num(document.getElementById('iInvite').value);
+  m.currentG = num(document.getElementById('iCurrentG').value);
+  m.naturalG = num(document.getElementById('iNaturalG').value);
+  // Rate overrides
+  const seg = activeSegmentKey(m);
+  const c = SEG_COEF[seg];
+  const rs = num(document.getElementById('iRs').value);
+  const rg = num(document.getElementById('iRg').value);
+  m.rsOverride = (Math.abs(rs - c.rs) > 1e-6) ? rs : null;
+  m.rgOverride = (Math.abs(rg - c.rg) > 1e-6) ? rg : null;
+  saveState();
+  renderAll();
+}
+function onSegmentChange(){
+  const m = activeMatch(); if(!m) return;
+  m.segment = document.getElementById('iSegment').value;
+  m.rsOverride = null; m.rgOverride = null;
+  syncInputsFromMatch(m);
+  saveState();
+  renderAll();
+}
+
+/* ==========================================================================
+   Render: Composition stack
+   ========================================================================== */
+function renderComp(m, s){
+  const segs = [
+    {name:'ST系来場', value:s.stAtt, color:'#b40012'},
+    {name:'招待来場', value:s.invAtt, color:'#f97316'},
+    {name:'現在一般券売', value:s.currentAtt, color:'#0f766e'},
+    {name:'自然販売', value:s.naturalAtt, color:'#2563eb'},
+    {name:'施策見込', value:s.actionAtt, color:'#7c3aed'},
+  ];
+  const gap = Math.max(0, num(m.target) - s.predA);
+  const over = Math.max(0, s.predA - num(m.target));
+  if(gap>0) segs.push({name:'不足', value:gap, color:'#fca5a5', pattern:true});
+  if(over>0) segs.push({name:'目標超過', value:over, color:'#0f1014'});
+
+  const denom = Math.max(1, num(m.target) + over);
+  const container = document.getElementById('compSegs');
+  const legend = document.getElementById('compLegend');
+  container.innerHTML=''; legend.innerHTML='';
+  segs.filter(x=>x.value>0.5).forEach(seg=>{
+    const w = clamp(seg.value/denom*100, 0.6, 100);
+    const el = document.createElement('div');
+    el.className='comp-seg';
+    el.style.width = w + '%';
+    el.style.background = seg.color;
+    if(seg.pattern){
+      el.style.background = `repeating-linear-gradient(45deg, ${seg.color} 0 8px, #fff 8px 14px)`;
+      el.style.color = '#b91c1c';
     }
+    el.innerHTML = (seg.value/denom>0.07 ? fmt(seg.value) : '') + `<div class="tipbox">${seg.name}：${fmt(seg.value)}人</div>`;
+    container.appendChild(el);
 
-    function addDays(date, days) {
-      const result = new Date(date);
-      result.setDate(result.getDate() + days);
-      return result;
+    const pill = document.createElement('span');
+    pill.className='legend-pill';
+    pill.innerHTML = `<span class="legend-dot" style="background:${seg.color}"></span>${seg.name} <strong style="margin-left:4px">${fmt(seg.value)}</strong>`;
+    legend.appendChild(pill);
+  });
+
+  // Marker
+  const marker = document.getElementById('compMarker');
+  marker.style.left = clamp(num(m.target)/denom*100, 0, 100) + '%';
+
+  document.getElementById('compLabel').textContent = `目標 ${fmt(m.target)} 人 / 予測 ${fmt(s.predA)} 人`;
+
+  // KPI mini
+  document.getElementById('kST').textContent = fmt(s.stAtt) + ' 人';
+  document.getElementById('kInv').textContent = fmt(s.invAtt) + ' 人';
+  document.getElementById('kReq').textContent = fmt(s.requiredG) + ' 枚';
+  document.getElementById('kPred').textContent = fmt(s.predA) + ' 人';
+}
+
+/* ==========================================================================
+   Render: Pace
+   ========================================================================== */
+function renderPace(m, s){
+  document.getElementById('paceDate').textContent = m.date || '—';
+  document.getElementById('paceDays').textContent = (s.daysLeft==null) ? '—' : (s.daysLeft<0 ? '終了' : s.daysLeft + ' 日');
+  document.getElementById('paceWeeks').textContent = (s.weeksLeft==null || s.daysLeft<=0) ? '—' : s.weeksLeft + ' 週';
+
+  const gapEl = document.getElementById('paceGap');
+  gapEl.textContent = fmt(s.gapG) + ' 枚';
+  gapEl.className = 'value ' + (s.gapG<=0 ? 'ok' : s.gapG>5000 ? 'bad' : 'warn');
+
+  const wEl = document.getElementById('paceWeekly');
+  if(s.gapG<=0){
+    wEl.textContent = '不足なし'; wEl.className='value ok';
+  } else if(s.daysLeft==null || s.daysLeft<=0){
+    wEl.textContent = '—'; wEl.className='value';
+  } else {
+    wEl.textContent = fmt(s.weeklyPace) + ' 枚 / 週';
+    wEl.className = 'value ' + (s.weeklyPace>8000 ? 'bad' : s.weeklyPace>3000 ? 'warn' : 'ok');
+  }
+  const dEl = document.getElementById('paceDaily');
+  if(s.gapG<=0){
+    dEl.textContent = '—'; dEl.className='value';
+  } else if(s.daysLeft==null || s.daysLeft<=0){
+    dEl.textContent = '—'; dEl.className='value';
+  } else {
+    dEl.textContent = fmt(s.dailyPace) + ' 枚 / 日';
+    dEl.className = 'value';
+  }
+
+  // Lead time bar
+  const bar = document.getElementById('leadBar');
+  const warns = document.getElementById('leadWarnings');
+  bar.innerHTML=''; warns.innerHTML='';
+  const days = s.daysLeft;
+
+  // Build track
+  bar.insertAdjacentHTML('beforeend', '<div class="lead-track"></div>');
+  if(days==null){
+    bar.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:12px;padding:18px 4px">試合日を設定すると表示</div>');
+    return;
+  }
+
+  // Max scale = max(30, days+5)
+  const maxDays = Math.max(30, days+5);
+  const fillW = clamp((maxDays - days) / maxDays * 100, 0, 100);
+  bar.insertAdjacentHTML('beforeend', `<div class="lead-fill" style="width:${fillW}%"></div>`);
+
+  // Now tick
+  const nowLeft = clamp((maxDays - days) / maxDays * 100, 0, 100);
+  bar.insertAdjacentHTML('beforeend', `<div class="lead-tick now" style="left:${nowLeft}%"><div class="pin"></div><div class="lbl">今日 (${days}日前)</div></div>`);
+
+  // Lead time pins
+  Object.entries(LEAD_TIME_DAYS).forEach(([type, d])=>{
+    if(d > maxDays) return;
+    const left = clamp((maxDays - d) / maxDays * 100, 0, 100);
+    bar.insertAdjacentHTML('beforeend', `<div class="lead-tick" style="left:${left}%"><div class="pin"></div><div class="lbl">${type} (${d}日)</div></div>`);
+  });
+
+  // Warnings
+  const tooLate = [];
+  Object.entries(LEAD_TIME_DAYS).forEach(([type, d])=>{
+    if(days < d && days >= 0){
+      const has = (m.methods||[]).some(mt => mt.type===type && methodTickets(mt)>0);
+      if(has) tooLate.push({type, d});
     }
+  });
+  if(tooLate.length>0){
+    const txt = tooLate.map(x=>`「${x.type}」（必要リードタイム ${x.d}日）`).join('、');
+    warns.insertAdjacentHTML('beforeend', `<div class="lead-warn">⚠️ 残り${days}日では効果が出にくい施策あり：${txt}。実行可能か再検討、または代替施策へ振替を。</div>`);
+  } else if(days>=0){
+    warns.insertAdjacentHTML('beforeend', `<div class="callout ok" style="margin-top:10px; font-size:12px">✓ 残り${days}日で、現在の施策はリードタイム的に実行可能。</div>`);
+  }
+}
 
-    function formatDate(date) {
-      if (!date) return "未入力";
-      const y = date.getFullYear();
-      const m = date.getMonth() + 1;
-      const d = date.getDate();
-      const w = weekdays[date.getDay()];
-      return `${y}/${m}/${d}（${w}）`;
-    }
+/* ==========================================================================
+   Render: Method Cards
+   ========================================================================== */
+function checkBench(type, key, val){
+  const b = BENCHMARKS[type]; if(!b || !b[key]) return null;
+  const [lo, hi] = b[key];
+  if(val < lo) return {warn:true, msg:`${pct(lo,1)}〜${pct(hi,1)}が標準（${pct(val,2)}は低め）`};
+  if(val > hi) return {warn:true, msg:`${pct(lo,1)}〜${pct(hi,1)}が標準（${pct(val,2)}は高め・楽観的かも）`};
+  return {warn:false, msg:`標準域: ${pct(lo,1)}〜${pct(hi,1)}`};
+}
+function checkBenchAvg(type, val){
+  const b = BENCHMARKS[type]; if(!b || !b.avg) return null;
+  const [lo, hi] = b.avg;
+  if(val < lo) return {warn:true, msg:`${lo}〜${hi}枚が標準（${val.toFixed(1)}は低め）`};
+  if(val > hi) return {warn:true, msg:`${lo}〜${hi}枚が標準（${val.toFixed(1)}は高め）`};
+  return {warn:false, msg:`標準域: ${lo}〜${hi}枚`};
+}
+function renderMethods(m){
+  const grid = document.getElementById('methodGrid');
+  const tbody = document.querySelector('#methodTable tbody');
+  grid.innerHTML=''; tbody.innerHTML='';
+  if(!m.methods) m.methods=[];
 
-    function formatShort(date) {
-      if (!date) return "";
-      const m = date.getMonth() + 1;
-      const d = date.getDate();
-      const w = weekdays[date.getDay()];
-      return `${m}/${d}（${w}）`;
-    }
+  // Sort cards by output
+  const sorted = m.methods.map((mt,i)=>({mt,i,t:methodTickets(mt)})).sort((a,b)=>b.t-a.t);
+  sorted.forEach(({mt,i,t})=>{
+    const bR = checkBench(mt.type, 'response', mt.response);
+    const bC = checkBench(mt.type, 'purchase', mt.purchase);
+    const bAvg = checkBenchAvg(mt.type, mt.avg);
+    const card = document.createElement('div');
+    card.className = 'method-card t-' + mt.type;
+    card.innerHTML = `
+      <div class="strip"></div>
+      <div class="method-card-body">
+        <div class="method-head">
+          <input class="method-name-edit" value="${mt.name}" oninput="setMethod(${i},'name',this.value,true)">
+          <span class="method-type-tag">${mt.type}</span>
+        </div>
+        <div class="method-main">${fmt(t)}<span class="unit">枚</span></div>
+        <div class="method-sub">この施策で積める一般券売（ActionG）</div>
+        <div class="method-params">
+          <div class="method-param">
+            <span class="pl">母数 N <span class="help" data-tip="対象になり得る人数・件数・団体数・表示数">?</span></span>
+            <input type="number" value="${mt.base}" oninput="setMethod(${i},'base',this.value)">
+          </div>
+          <div class="method-param">
+            <span class="pl">到達率 R <span class="help" data-tip="情報が実際に届く割合">?</span></span>
+            <input type="number" step="0.001" value="${mt.reach}" oninput="setMethod(${i},'reach',this.value)">
+          </div>
+          <div class="method-param ${bR&&bR.warn?'has-warn':''}">
+            <span class="pl">反応率 A <span class="help" data-tip="気になる・クリック・問合せる割合">?</span></span>
+            <input type="number" step="0.001" value="${mt.response}" oninput="setMethod(${i},'response',this.value)">
+            ${bR?`<span class="bench ${bR.warn?'warn':''}">${bR.warn?'⚠ ':''}${bR.msg}</span>`:''}
+          </div>
+          <div class="method-param ${bC&&bC.warn?'has-warn':''}">
+            <span class="pl">購入率 C <span class="help" data-tip="反応者のうち購入・申込まで進む割合">?</span></span>
+            <input type="number" step="0.001" value="${mt.purchase}" oninput="setMethod(${i},'purchase',this.value)">
+            ${bC?`<span class="bench ${bC.warn?'warn':''}">${bC.warn?'⚠ ':''}${bC.msg}</span>`:''}
+          </div>
+          <div class="method-param ${bAvg&&bAvg.warn?'has-warn':''}">
+            <span class="pl">平均枚数 T <span class="help" data-tip="1購入あたりの平均枚数">?</span></span>
+            <input type="number" step="0.1" value="${mt.avg}" oninput="setMethod(${i},'avg',this.value)">
+            ${bAvg?`<span class="bench ${bAvg.warn?'warn':''}">${bAvg.warn?'⚠ ':''}${bAvg.msg}</span>`:''}
+          </div>
+          <div class="method-param">
+            <span class="pl">重複補正 U <span class="help" data-tip="既存需要・他施策との重なりを差し引く係数">?</span></span>
+            <input type="number" step="0.001" value="${mt.overlap}" oninput="setMethod(${i},'overlap',this.value)">
+          </div>
+        </div>
+      </div>
+      <div class="method-foot">
+        <select onchange="setMethod(${i},'type',this.value,true)">
+          ${['広告','営業','媒介','CRM','toC'].map(t=>`<option ${mt.type===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+        <button class="btn danger sm" onclick="removeMethod(${i})">削除</button>
+      </div>
+    `;
+    grid.appendChild(card);
 
-    function countDaysInclusive(startDate, endDate) {
-      if (!startDate || !endDate) return null;
-      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-      const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-      return diff + 1;
-    }
+    // Table row
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${mt.name}" oninput="setMethod(${i},'name',this.value,true)" style="padding:6px 8px;font-size:13px"></td>
+      <td><select onchange="setMethod(${i},'type',this.value,true)" style="padding:6px 8px;font-size:13px">
+        ${['広告','営業','媒介','CRM','toC'].map(t=>`<option ${mt.type===t?'selected':''}>${t}</option>`).join('')}
+      </select></td>
+      <td><input type="number" value="${mt.base}" oninput="setMethod(${i},'base',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><input type="number" step="0.001" value="${mt.reach}" oninput="setMethod(${i},'reach',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><input type="number" step="0.001" value="${mt.response}" oninput="setMethod(${i},'response',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><input type="number" step="0.001" value="${mt.purchase}" oninput="setMethod(${i},'purchase',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><input type="number" step="0.1" value="${mt.avg}" oninput="setMethod(${i},'avg',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><input type="number" step="0.001" value="${mt.overlap}" oninput="setMethod(${i},'overlap',this.value)" style="padding:6px 8px;font-size:13px"></td>
+      <td><strong>${fmt(t)}枚</strong></td>
+      <td><button class="btn danger sm" onclick="removeMethod(${i})">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
 
-    function updateDates() {
-      const startDate = parseDate(startInput.value);
-      const endDate = parseDate(endInput.value);
+  // Add card
+  const add = document.createElement('button');
+  add.className='method-add-card';
+  add.onclick = addMethod;
+  add.innerHTML = `<span class="plus">＋</span><span>施策を追加</span>`;
+  grid.appendChild(add);
+}
 
-      startWeekday.textContent = startDate ? `${weekdays[startDate.getDay()]}曜` : "--";
-      endWeekday.textContent = endDate ? `${weekdays[endDate.getDay()]}曜` : "--";
+function setMethod(i, key, val, isText=false){
+  const m = activeMatch(); if(!m) return;
+  m.methods[i][key] = isText ? val : num(val);
+  saveState();
+  renderAll(false); // skip method re-render on number to keep focus
+}
+function addMethod(){
+  const m = activeMatch(); if(!m) return;
+  m.methods.push({name:'新規施策', type:'広告', base:10000, reach:1, response:.01, purchase:.05, avg:2, overlap:.8});
+  saveState();
+  renderAll();
+}
+function removeMethod(i){
+  const m = activeMatch(); if(!m) return;
+  if(!confirm('この施策を削除しますか？')) return;
+  m.methods.splice(i,1);
+  saveState();
+  renderAll();
+}
+function resetMethods(){
+  const m = activeMatch(); if(!m) return;
+  if(!confirm('施策をデフォルトに戻します。よろしいですか？')) return;
+  m.methods = JSON.parse(JSON.stringify(DEFAULT_METHODS));
+  saveState();
+  renderAll();
+}
 
-      baseText.textContent = startDate ? formatDate(startDate) : "掲載開始日";
-      matchText.textContent = endDate ? formatDate(endDate) : "未入力";
+/* ===========================================================================
+   Single plan helpers
+   ========================================================================== */
+function openPicker(){ /* v7: 試合選択UIは廃止。日付と目標を直接入力。 */ }
+function closePicker(){
+  const picker = document.getElementById('picker');
+  if(picker) picker.classList.remove('open');
+}
+function renderMatchGrid(){}
+function renderMasterEdit(){}
+function selectMatch(id){
+  state.activeMatchId = id;
+  saveState();
+  syncInputsFromMatch(activeMatch());
+  renderAll();
+}
+function addNewMatch(){
+  const m = activeMatch();
+  if(m){
+    m.date = '';
+    m.target = 40000;
+    m.currentG = 0;
+    m.naturalG = 0;
+    m.methods = JSON.parse(JSON.stringify(DEFAULT_METHODS));
+    saveState();
+    syncInputsFromMatch(m);
+    renderAll();
+  }
+}
+function deleteMatch(id){}
+function updateMatchField(id, field, val){
+  const m = activeMatch(); if(!m) return;
+  m[field] = val;
+  saveState();
+  renderAll();
+}
 
-      if (startDate && endDate) {
-        const periodDays = countDaysInclusive(startDate, endDate);
-        if (periodDays > 0) {
-          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／${periodDays}日間`;
-        } else if (periodDays === 0) {
-          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／日付要確認`;
-        } else {
-          periodText.textContent = `${formatShort(startDate)}〜${formatShort(endDate)}／終了日が開始日より前です`;
-        }
-      } else if (startDate) {
-        periodText.textContent = `${formatShort(startDate)}〜掲載終了日未入力`;
-      } else if (endDate) {
-        periodText.textContent = `掲載開始日未入力〜${formatShort(endDate)}`;
-      } else {
-        periodText.textContent = "日付を入力してください";
-      }
+/* ==========================================================================
+   Scenarios
+   ========================================================================== */
+function saveScenario(){
+  const m = activeMatch(); if(!m) return;
+  const name = document.getElementById('scName').value.trim();
+  if(!name){ alert('シナリオ名を入力してください'); return; }
+  const s = computeState(m);
+  state.scenarios.push({
+    id:'sc-'+Date.now(),
+    matchId: m.id,
+    matchName: m.date || '日付未設定',
+    name,
+    snapshot: {
+      target:m.target, st:m.st, invite:m.invite, currentG:m.currentG, naturalG:m.naturalG,
+      segment:m.segment, rsOverride:m.rsOverride, rgOverride:m.rgOverride,
+      methods: JSON.parse(JSON.stringify(m.methods))
+    },
+    result: {predA:s.predA, gapG:s.gapG, action:s.action, requiredG:s.requiredG}
+  });
+  document.getElementById('scName').value='';
+  saveState();
+  renderScenarios();
+}
+function applyScenario(id){
+  const sc = state.scenarios.find(x=>x.id===id); if(!sc) return;
+  const m = activeMatch(); if(!m) return;
+  if(!confirm(`シナリオ「${sc.name}」を現在の試合に適用します。よろしいですか？`)) return;
+  Object.assign(m, sc.snapshot, {methods: JSON.parse(JSON.stringify(sc.snapshot.methods))});
+  saveState();
+  syncInputsFromMatch(m);
+  renderAll();
+}
+function deleteScenario(id){
+  if(!confirm('このシナリオを削除しますか？')) return;
+  state.scenarios = state.scenarios.filter(s=>s.id!==id);
+  saveState();
+  renderScenarios();
+}
+function renderScenarios(){
+  const grid = document.getElementById('scenarioGrid');
+  grid.innerHTML='';
+  if(state.scenarios.length===0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="em-icon">📊</div><div class="em-title">まだシナリオがありません</div><div class="em-sub">名前を付けて保存すると、ここで比較できます</div></div>`;
+    return;
+  }
+  state.scenarios.slice().reverse().forEach(sc=>{
+    const status = sc.result.gapG<=0 ? 'green' : sc.result.gapG<3000 ? 'yellow' : 'red';
+    const statusText = {green:'達成', yellow:'近い', red:'不足大'}[status];
+    const card = document.createElement('div');
+    card.className='scenario-card';
+    card.innerHTML = `
+      <span class="sc-status ${status}">${statusText}</span>
+      <div class="sc-name">${sc.matchName || '日付未設定'} · ${sc.name}</div>
+      <div class="sc-main">${fmt(sc.result.predA)}<span style="font-size:13px;color:var(--muted);font-weight:800"> 人</span></div>
+      <div class="sc-meta">
+        <span>不足 ${fmt(sc.result.gapG)}枚</span> · 
+        <span>施策 ${fmt(sc.result.action)}枚</span>
+      </div>
+      <div class="sc-actions">施策: ${sc.snapshot.methods.length}件</div>
+      <div class="sc-buttons">
+        <button class="btn ghost sm" onclick="applyScenario('${sc.id}')">適用</button>
+        <button class="btn danger sm" onclick="deleteScenario('${sc.id}')">削除</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
 
-      document.querySelectorAll(".step").forEach((step) => {
-        const target = step.querySelector(".actual-date");
-        if (!target) return;
+/* ==========================================================================
+   Logs (Benchmark records)
+   ========================================================================== */
+function addLog(){
+  const name = document.getElementById('logName').value.trim();
+  const type = document.getElementById('logType').value;
+  const pred = num(document.getElementById('logPred').value);
+  const act  = num(document.getElementById('logAct').value);
+  if(!name){ alert('施策名を入力'); return; }
+  if(act<=0){ alert('実績枚数を入力'); return; }
+  state.logs.push({
+    id:'lg-'+Date.now(),
+    date: TODAY_STR,
+    matchId: state.activeMatchId,
+    matchName: activeMatch()?.date || '日付未設定',
+    name, type, pred, act
+  });
+  ['logName','logPred','logAct'].forEach(id=>document.getElementById(id).value='');
+  saveState();
+  renderLogs();
+}
+function deleteLog(id){
+  if(!confirm('このログを削除しますか？')) return;
+  state.logs = state.logs.filter(l=>l.id!==id);
+  saveState();
+  renderLogs();
+}
+function renderLogs(){
+  const box = document.getElementById('logList');
+  box.innerHTML='';
+  if(state.logs.length===0){
+    box.innerHTML = `<div class="empty"><div class="em-icon">📋</div><div class="em-title">まだログがありません</div><div class="em-sub">実施した施策の予測vs実績を記録してベンチマーク化</div></div>`;
+    return;
+  }
+  // Header
+  const head = document.createElement('div');
+  head.className = 'log-row';
+  head.style.cssText = 'font-size:11px; color:var(--muted); font-weight:800; letter-spacing:.04em; text-transform:uppercase; border-bottom:1px solid var(--line)';
+  head.innerHTML = `<div>日付</div><div>試合 / 施策名</div><div style="text-align:right">タイプ</div><div style="text-align:right">予測</div><div style="text-align:right">実績</div><div style="text-align:right">乖離</div><div></div>`;
+  box.appendChild(head);
+  state.logs.slice().reverse().forEach(l=>{
+    const delta = l.act - l.pred;
+    const ratio = l.pred>0 ? (l.act/l.pred) : 0;
+    const cls = ratio>=1 ? 'pos' : ratio>=0.7 ? 'warn' : 'neg';
+    const row = document.createElement('div');
+    row.className='log-row';
+    row.innerHTML = `
+      <div style="font-size:11px;color:var(--muted)">${l.date}</div>
+      <div><strong style="font-size:13px">${l.name}</strong><br><span style="font-size:11px;color:var(--muted)">${l.matchName||''}</span></div>
+      <div style="text-align:right"><span class="tag ${l.type==='広告'?'high':l.type==='営業'?'low':'mid'}">${l.type}</span></div>
+      <div style="text-align:right; font-variant-numeric:tabular-nums">${fmt(l.pred)}</div>
+      <div style="text-align:right; font-variant-numeric:tabular-nums; font-weight:800">${fmt(l.act)}</div>
+      <div class="delta ${cls}" style="text-align:right">${fmtSigned(delta)}</div>
+      <div style="text-align:right"><button class="btn danger sm" onclick="deleteLog('${l.id}')" style="padding:4px 8px">×</button></div>
+    `;
+    box.appendChild(row);
+  });
+}
+function exportLogs(){
+  if(state.logs.length===0){ alert('ログがありません'); return; }
+  const headers = ['date','matchName','name','type','pred','act','delta','ratio'];
+  const rows = state.logs.map(l=>[
+    l.date, l.matchName, l.name, l.type, l.pred, l.act, l.act-l.pred, l.pred>0?(l.act/l.pred).toFixed(3):''
+  ]);
+  let csv = '\ufeff' + headers.join(',') + '\n';
+  csv += rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `action_logs_${TODAY_STR}.csv`;
+  a.click();
+}
 
-        if (!startDate) {
-          target.textContent = "";
-          return;
-        }
+/* ==========================================================================
+   Validation Table
+   ========================================================================== */
+function renderValidation(){
+  const tb = document.querySelector('#validateTable tbody');
+  if(!tb) return;
+  tb.innerHTML='';
+  VALIDATION_DATA.forEach(r=>{
+    tb.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${r.year}</td>
+        <td>${r.opp}</td>
+        <td>${r.seg}</td>
+        <td>${fmt(r.actual)}</td>
+        <td>${fmt(r.general)}</td>
+        <td>${fmt(r.invite)}</td>
+        <td>${fmt(r.st)}</td>
+        <td>${fmt(r.v3)}</td>
+        <td class="${r.err>=0?'pos':'neg'}">${fmtSigned(r.err)}</td>
+        <td>${(r.mape*100).toFixed(1)}%</td>
+      </tr>
+    `);
+  });
+}
 
-        const offsetStart = Number(step.dataset.offsetStart);
-        const offsetEnd = Number(step.dataset.offsetEnd);
-        const calcStart = addDays(startDate, offsetStart);
-        const calcEnd = addDays(startDate, offsetEnd);
+/* ==========================================================================
+   Tabs
+   ========================================================================== */
+function showTab(ev, id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  ev.currentTarget.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+function toggleCol(head){
+  head.classList.toggle('open');
+  head.nextElementSibling.classList.toggle('open');
+}
 
-        if (offsetStart === offsetEnd) {
-          target.textContent = `目安日：${formatShort(calcStart)}`;
-        } else {
-          target.textContent = `目安期間：${formatShort(calcStart)}〜${formatShort(calcEnd)}`;
-        }
-      });
-    }
+/* ==========================================================================
+   Export / Import
+   ========================================================================== */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `urawa_dashboard_${TODAY_STR}.json`;
+  a.click();
+}
+function importJSON(){
+  const input = document.createElement('input');
+  input.type='file'; input.accept='application/json';
+  input.onchange = e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      try{
+        const data = JSON.parse(ev.target.result);
+        if(!data.matches){ alert('形式が違うようです'); return; }
+        if(!confirm('現在のデータを上書きします。よろしいですか？')) return;
+        state = data;
+        if(!state.scenarios) state.scenarios=[];
+        if(!state.logs) state.logs=[];
+        if(!state.activeMatchId || !state.matches.find(m=>m.id===state.activeMatchId)) state.activeMatchId = state.matches[0]?.id;
+        saveState();
+        syncInputsFromMatch(activeMatch());
+        renderAll();
+        alert('読み込み完了');
+      }catch(err){ alert('読み込みに失敗: '+err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 
-    startInput.addEventListener("input", updateDates);
-    endInput.addEventListener("input", updateDates);
-    updateDates();
-  </script>
+/* ==========================================================================
+   Master Render
+   ========================================================================== */
+function renderAll(rerenderMethods=true){
+  const m = activeMatch();
+  if(!m){
+    document.getElementById('matchPill').classList.add('empty');
+    return;
+  }
+  // Re-sync segment auto if needed (but don't override user choice)
+  if(m.segment==='auto'){
+    const seg = autoSegment(m.currentG);
+    const c = SEG_COEF[seg];
+    if(!m.rsOverride) document.getElementById('iRs').value = c.rs.toFixed(3);
+    if(!m.rgOverride) document.getElementById('iRg').value = c.rg.toFixed(3);
+  }
+  const s = computeState(m);
+  renderVerdict(m, s);
+  renderComp(m, s);
+  renderPace(m, s);
+  if(rerenderMethods) renderMethods(m);
+  renderScenarios();
+  renderLogs();
+}
+
+/* ==========================================================================
+   Init
+   ========================================================================== */
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape') closePicker();
+});
+
+syncInputsFromMatch(activeMatch());
+renderValidation();
+renderAll();
+</script>
+
 </body>
 </html>
