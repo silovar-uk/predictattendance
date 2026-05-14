@@ -181,15 +181,26 @@ input[disabled]{background:var(--line-soft); color:var(--muted)}
 .pace-row .value.warn{color:var(--warn)}
 .pace-row .value.ok{color:var(--ok)}
 
-.lead-bar{position:relative; height:54px; margin:18px 0 8px}
-.lead-track{position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:6px; background:var(--line-soft); border-radius:999px}
-.lead-fill{position:absolute; left:0; top:50%; transform:translateY(-50%); height:6px; background:linear-gradient(90deg, var(--red), var(--red-dark)); border-radius:999px}
-.lead-tick{position:absolute; top:0; height:54px; display:flex; flex-direction:column; align-items:center}
-.lead-tick .pin{width:2px; height:18px; background:var(--ink); margin-top:18px}
-.lead-tick.now .pin{background:var(--red); height:30px; margin-top:12px}
-.lead-tick .lbl{font-size:10px; font-weight:800; color:var(--muted); margin-top:2px; white-space:nowrap}
-.lead-tick.now .lbl{color:var(--red); font-weight:900}
+.lead-bar{position:relative; height:72px; margin:18px 0 6px; padding:0 8px}
+.lead-track{position:absolute; left:8px; right:8px; top:34px; height:6px; background:var(--line-soft); border-radius:999px}
+.lead-fill{position:absolute; left:8px; top:34px; height:6px; background:linear-gradient(90deg, var(--red), var(--red-dark)); border-radius:999px}
+.lead-tick{position:absolute; top:8px; height:52px; width:14px; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; pointer-events:none}
+.lead-tick .pin{width:2px; height:28px; background:var(--ink); margin-top:18px; border-radius:999px}
+.lead-tick.now .pin{background:var(--red); height:40px; margin-top:6px; box-shadow:0 0 0 4px rgba(180,0,18,.1)}
+.lead-tick.late .pin{background:var(--warn)}
+.lead-tick .lbl{display:none}
+.lead-tick.now .lbl{display:block; position:absolute; top:-8px; left:50%; transform:translateX(-50%); color:var(--red); background:#fff; border:1px solid var(--red-border); border-radius:999px; padding:2px 7px; font-size:10px; font-weight:900; white-space:nowrap; box-shadow:var(--shadow-sm)}
+.lead-chip-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(116px, 1fr)); gap:6px; margin-top:8px}
+.lead-chip{display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 9px; font-size:11px; font-weight:800; color:var(--ink-2); line-height:1.25}
+.lead-chip .name{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.lead-chip .days{flex-shrink:0; color:var(--muted); font-variant-numeric:tabular-nums}
+.lead-chip.now{border-color:var(--red-border); background:var(--red-soft); color:var(--red)}
+.lead-chip.late{border-color:#fde68a; background:var(--warn-soft); color:var(--warn)}
 .lead-warn{display:flex; gap:8px; align-items:flex-start; padding:10px 12px; background:var(--warn-soft); border-radius:10px; margin-top:10px; font-size:12px; color:var(--warn); font-weight:700; line-height:1.5}
+@media(max-width:720px){
+  .lead-chip-row{grid-template-columns:repeat(2, minmax(0, 1fr))}
+  .lead-chip{border-radius:10px; align-items:flex-start; flex-direction:column; gap:2px}
+}
 
 /* ===== Composition Bar ===== */
 .comp-bar{display:flex; height:48px; border-radius:14px; overflow:hidden; background:var(--line-soft); border:1px solid var(--line); margin:14px 0 10px; position:relative}
@@ -1078,34 +1089,44 @@ function renderPace(m, s){
   // Build track
   bar.insertAdjacentHTML('beforeend', '<div class="lead-track"></div>');
   if(days==null){
-    bar.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:12px;padding:18px 4px">試合日を設定すると表示</div>');
+    bar.insertAdjacentHTML('beforeend', '<div style="color:var(--muted);font-size:12px;padding:24px 4px">試合日を設定すると表示</div>');
     return;
   }
 
   // Max scale = max(30, days+5)
   const maxDays = Math.max(30, days+5);
   const fillW = clamp((maxDays - days) / maxDays * 100, 0, 100);
-  bar.insertAdjacentHTML('beforeend', `<div class="lead-fill" style="width:${fillW}%"></div>`);
+  bar.insertAdjacentHTML('beforeend', `<div class="lead-fill" style="width:calc(${fillW}% - ${fillW > 0 ? '8px' : '0px'})"></div>`);
 
-  // Now tick
+  // Now tick. 文字が密集しないよう、バー上は「今日」だけ表示し、施策名は下のチップに逃がす。
   const nowLeft = clamp((maxDays - days) / maxDays * 100, 0, 100);
-  bar.insertAdjacentHTML('beforeend', `<div class="lead-tick now" style="left:${nowLeft}%"><div class="pin"></div><div class="lbl">今日 (${days}日前)</div></div>`);
+  bar.insertAdjacentHTML('beforeend', `<div class="lead-tick now" style="left:${nowLeft}%"><div class="lbl">今日</div><div class="pin"></div></div>`);
+
+  const tooLate = [];
 
   // Lead time pins
   Object.entries(LEAD_TIME_DAYS).forEach(([type, d])=>{
     if(d > maxDays) return;
     const left = clamp((maxDays - d) / maxDays * 100, 0, 100);
-    bar.insertAdjacentHTML('beforeend', `<div class="lead-tick" style="left:${left}%"><div class="pin"></div><div class="lbl">${type} (${d}日)</div></div>`);
-  });
-
-  // Warnings
-  const tooLate = [];
-  Object.entries(LEAD_TIME_DAYS).forEach(([type, d])=>{
-    if(days < d && days >= 0){
+    const isLate = days < d && days >= 0;
+    if(isLate){
       const has = (m.methods||[]).some(mt => mt.type===type && methodTickets(mt)>0);
       if(has) tooLate.push({type, d});
     }
+    bar.insertAdjacentHTML('beforeend', `<div class="lead-tick ${isLate ? 'late' : ''}" style="left:${left}%" title="${type}：${d}日前までに着手"><div class="pin"></div></div>`);
   });
+
+  // Label chips: バー上の文字重なり防止用。狭い幅でも自動で折り返す。
+  const chips = [
+    `<div class="lead-chip now"><span class="name">今日</span><span class="days">残り${days}日</span></div>`,
+    ...Object.entries(LEAD_TIME_DAYS).map(([type, d])=>{
+      const isLate = days < d && days >= 0;
+      return `<div class="lead-chip ${isLate ? 'late' : ''}"><span class="name">${type}</span><span class="days">${d}日前</span></div>`;
+    })
+  ];
+  warns.insertAdjacentHTML('beforeend', `<div class="lead-chip-row">${chips.join('')}</div>`);
+
+  // Warnings
   if(tooLate.length>0){
     const txt = tooLate.map(x=>`「${x.type}」（必要リードタイム ${x.d}日）`).join('、');
     warns.insertAdjacentHTML('beforeend', `<div class="lead-warn">⚠️ 残り${days}日では効果が出にくい施策あり：${txt}。実行可能か再検討、または代替施策へ振替を。</div>`);
